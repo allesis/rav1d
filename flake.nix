@@ -43,12 +43,12 @@
         buildInputs = with pkgs; [
           rust-bin.stable.latest.default
           rust-analyzer
-	  nasm
+          nasm
         ];
-	cargoBuildFlags = [
-  "--no-default-features"
-  "--features=binaries,ivf,y4m,serde"
-];
+        cargoBuildFlags = [
+          "--no-default-features"
+          #"--features=binaries,ivf,y4m,serde"
+        ];
 
         packages = with pkgs; [
           rustToolchain
@@ -59,8 +59,9 @@
           cargo-watch
           rust-analyzer
           bacon
-	  clippy 
-	  taplo
+          clippy
+          taplo
+          lazygit
         ];
 
         env = {
