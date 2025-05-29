@@ -93,6 +93,7 @@ use parking_lot::Condvar;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use parking_lot::RwLockReadGuard;
+use std::collections::HashMap;
 use std::ffi::c_int;
 use std::ffi::c_uint;
 use std::mem;
@@ -438,6 +439,7 @@ pub struct Rav1dContext {
     pub(crate) logger: Option<Rav1dLogger>,
 
     pub(crate) picture_pool: Arc<MemPool<u8>>,
+    pub(crate) hashmap: Arc<Mutex<HashMap<u64, Vec<u8>>>>,
 }
 
 // TODO(SJC): Remove when Rav1dContext is thread-safe
