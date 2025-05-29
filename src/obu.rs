@@ -2236,6 +2236,7 @@ fn parse_obus(
             return Err(EINVAL);
         }
         state.n_tiles += 1 + hdr.end - hdr.start;
+        println!("{:?}", data);
         state.tiles.push(Rav1dTileGroup {
             data: Rav1dData {
                 data: Some(data),
