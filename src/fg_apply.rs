@@ -1,15 +1,15 @@
 #![deny(unsafe_code)]
 
+use crate::align::ArrayDefault;
+use crate::filmgrain::Rav1dFilmGrainDSPContext;
+use crate::filmgrain::FG_BLOCK_SIZE;
 use crate::include::common::bitdepth::BitDepth;
 use crate::include::common::bitdepth::BPC;
 use crate::include::dav1d::headers::Rav1dMatrixCoefficients;
 use crate::include::dav1d::headers::Rav1dPixelLayout;
 use crate::include::dav1d::picture::Rav1dPicture;
-use crate::src::align::ArrayDefault;
-use crate::src::filmgrain::Rav1dFilmGrainDSPContext;
-use crate::src::filmgrain::FG_BLOCK_SIZE;
-use crate::src::internal::GrainBD;
-use crate::src::strided::Strided as _;
+use crate::internal::GrainBD;
+use crate::strided::Strided as _;
 use std::cmp;
 
 fn generate_scaling<BD: BitDepth>(bd: BD, points: &[[u8; 2]]) -> BD::Scaling {
@@ -133,7 +133,6 @@ pub(crate) fn rav1d_apply_grain_row<BD: BitDepth>(
     let seq_hdr = &***out.seq_hdr.as_ref().unwrap();
     let frame_hdr = &***out.frame_hdr.as_ref().unwrap();
     let data = &frame_hdr.film_grain.data;
-    let data_c = &data.clone().into();
     let in_data = &r#in.data.as_ref().unwrap().data;
     let out_data = &out.data.as_ref().unwrap().data;
     let w = out.p.w as usize;
@@ -204,7 +203,7 @@ pub(crate) fn rav1d_apply_grain_row<BD: BitDepth>(
                     layout,
                     &out_data[1 + pl],
                     &in_data[1 + pl],
-                    data_c,
+                    data,
                     cpw,
                     &scaling[1 + pl],
                     &grain_lut[1 + pl],
