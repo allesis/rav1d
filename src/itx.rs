@@ -335,6 +335,7 @@ fn inv_txfm_add_wht_wht_4x4_rust<BD: BitDepth>(
         c = &mut c[W..];
     }
     coeff.fill(0.into());
+    coeff.iter().for_each(|c| println!("{}", c));
 
     for x in 0..W {
         rav1d_inv_wht4_1d_c(&mut tmp[x..], H.try_into().unwrap());
