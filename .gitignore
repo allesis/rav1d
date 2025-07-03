@@ -20,3 +20,4 @@ target/
 
 .gdb_history
 .gdbinit
+.direnv
