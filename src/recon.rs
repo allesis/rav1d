@@ -2,6 +2,7 @@
 
 use crate::cdef_apply::rav1d_cdef_brow;
 use crate::ctx::CaseSet;
+use crate::disjoint_mut::DisjointMutIndex;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
 use crate::include::common::bitdepth::AsPrimitive;
@@ -66,6 +67,7 @@ use crate::lf_apply::rav1d_loopfilter_sbrow_rows;
 use crate::lr_apply::rav1d_lr_sbrow;
 use crate::msac::rav1d_msac_decode_bool_adapt;
 use crate::msac::rav1d_msac_decode_bool_equi;
+use crate::msac::rav1d_msac_decode_bool_rust;
 use crate::msac::rav1d_msac_decode_bools;
 use crate::msac::rav1d_msac_decode_hi_tok;
 use crate::msac::rav1d_msac_decode_symbol_adapt16;
@@ -547,6 +549,16 @@ fn decode_coefs<BD: BitDepth>(
 
     if dbg {
         println!("Start: r={}", ts_c.msac.rng);
+    }
+    let encoded_type = rav1d_msac_decode_bools(&mut ts_c.msac, 8);
+    println!("HASH OR QCOEFFS? {:?}", encoded_type);
+    if encoded_type == 255 {
+        let hash: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
+        let hash: u64 =
+            ((hash as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
+        println!("HASH IS {:?}", hash);
+    } else if encoded_type != 0 {
+        panic!("MISALIGNED INPUT BUFFER");
     }
 
     // does this block have any non-zero coefficients
