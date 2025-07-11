@@ -21,3 +21,5 @@ target/
 .gdb_history
 .gdbinit
 .direnv
+.cache/clangd/index
+rav1d.norg
