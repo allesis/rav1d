@@ -4663,6 +4663,7 @@ pub(crate) fn rav1d_decode_frame_init_cdf(
     Ok(())
 }
 
+use std::collections::HashMap;
 fn rav1d_decode_frame_main(c: &Rav1dContext, f: &mut Rav1dFrameData) -> Rav1dResult {
     assert!(c.tc.len() == 1);
 
@@ -4795,6 +4796,7 @@ pub(crate) fn rav1d_decode_frame(c: &Rav1dContext, fc: &Rav1dFrameContext) -> Ra
         // wait until all threads have completed
         if res.is_ok() {
             if c.tc.len() > 1 {
+                f.hashmap = c.hashmap.clone();
                 res = rav1d_task_create_tile_sbrow(fc, &f, 0, 1);
                 drop(f); // release the frame data before waiting for the other threads
                 let mut task_thread_lock = (*fc.task_thread.ttd).lock.lock();
@@ -4809,6 +4811,7 @@ pub(crate) fn rav1d_decode_frame(c: &Rav1dContext, fc: &Rav1dFrameContext) -> Ra
                 drop(task_thread_lock);
                 res = fc.task_thread.retval.try_lock().unwrap().err_or(());
             } else {
+                f.hashmap = c.hashmap.clone();
                 res = rav1d_decode_frame_main(c, &mut f);
                 let frame_hdr = &***f.frame_hdr.as_ref().unwrap();
                 if res.is_ok() && frame_hdr.refresh_context != 0 && fc.task_thread.update_set.get()
