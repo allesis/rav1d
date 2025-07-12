@@ -151,6 +151,7 @@ mod warpmv;
 mod wedge;
 
 pub use crate::error::Dav1dResult;
+use std::collections::HashMap;
 
 use crate::c_arc::RawArc;
 use crate::c_box::FnFree;
@@ -438,6 +439,7 @@ pub(crate) fn rav1d_open(s: &Rav1dSettings) -> Rav1dResult<Arc<Rav1dContext>> {
         task_thread,
         state,
         tc,
+        hashmap: Some(Arc::new(Mutex::new(HashMap::new()))),
         ..Default::default()
     };
 
