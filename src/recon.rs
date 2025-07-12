@@ -2,7 +2,6 @@
 
 use crate::cdef_apply::rav1d_cdef_brow;
 use crate::ctx::CaseSet;
-use crate::disjoint_mut::DisjointMutIndex;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
 use crate::include::common::bitdepth::AsPrimitive;
@@ -26,6 +25,7 @@ use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
 use crate::internal::Bxy;
 use crate::internal::Cf;
 use crate::internal::CodedBlockInfo;
+use crate::internal::HashObject;
 use crate::internal::Rav1dContext;
 use crate::internal::Rav1dFrameData;
 use crate::internal::Rav1dTaskContext;
@@ -67,7 +67,6 @@ use crate::lf_apply::rav1d_loopfilter_sbrow_rows;
 use crate::lr_apply::rav1d_lr_sbrow;
 use crate::msac::rav1d_msac_decode_bool_adapt;
 use crate::msac::rav1d_msac_decode_bool_equi;
-use crate::msac::rav1d_msac_decode_bool_rust;
 use crate::msac::rav1d_msac_decode_bools;
 use crate::msac::rav1d_msac_decode_hi_tok;
 use crate::msac::rav1d_msac_decode_symbol_adapt16;
@@ -94,11 +93,13 @@ use assert_matches::debug_assert_matches;
 use libc::intptr_t;
 use std::array;
 use std::cmp;
+use std::collections::HashMap;
 use std::ffi::c_int;
 use std::ffi::c_uint;
 use std::hint::assert_unchecked;
 use std::ops::BitOr;
 use std::ptr;
+use std::sync::{Arc, Mutex};
 use to_method::To as _;
 
 impl Bxy {
@@ -537,6 +538,7 @@ fn decode_coefs<BD: BitDepth>(
     txtp: &mut TxfmType,
     res_ctx: &mut u8,
 ) -> c_int {
+    let mut hashmap = f.hashmap.clone();
     let dc_sign_ctx;
     let dc_sign;
     let mut dc_dq;
@@ -550,16 +552,11 @@ fn decode_coefs<BD: BitDepth>(
     if dbg {
         println!("Start: r={}", ts_c.msac.rng);
     }
-    let encoded_type = rav1d_msac_decode_bools(&mut ts_c.msac, 8);
-    println!("HASH OR QCOEFFS? {:?}", encoded_type);
-    if encoded_type == 255 {
-        let hash: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
-        let hash: u64 =
-            ((hash as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
-        println!("HASH IS {:?}", hash);
-    } else if encoded_type != 0 {
-        panic!("MISALIGNED INPUT BUFFER");
-    }
+    let hash;
+    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
+    hash =
+        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
+    println!("HASH IS {:?}", hash);
 
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
@@ -753,6 +750,29 @@ fn decode_coefs<BD: BitDepth>(
         #[cfg_attr(debug_assertions, track_caller)]
         pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
             self.0[self.index(rc)] = value.as_();
+        }
+        pub fn into_vec_i32(&self) -> Vec<i32> {
+            self.0
+                .iter()
+                .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
+                .collect()
+        }
+        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
+            vec.iter().enumerate().for_each(|(i, v)| {
+                let val = self.get(i.try_into().expect("FAILED"));
+                println!("VAL {:?} V {:?}", val, *v);
+                self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
+            });
+        }
+    }
+    impl<'a, BD: BitDepth> std::fmt::Debug for Cf<'a, BD> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let values: Vec<i32> = self
+                .0
+                .iter()
+                .map(|&c| c.try_into().unwrap_or_default())
+                .collect();
+            f.debug_struct("Cf").field("coefs_i32", &values).finish()
         }
     }
 
@@ -1270,10 +1290,35 @@ fn decode_coefs<BD: BitDepth>(
         None => {}
     }
 
-    // context
-    *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
+    let mut cf = cf;
+    let hashmap = hashmap.expect("FAILED TO FIND HASHMAP");
+    let mut hashmap = hashmap.lock();
+    let mut res_eob = eob as i32;
+    match hashmap.get(&hash) {
+        Some(res) => {
+            // Hash found in table
+            let vec = &res.vec;
+            res_eob = res.eob;
+            *res_ctx = res.res_ctx;
+            println!("CF {:?}\nVEC {:?}", cf, vec);
+            cf.insert_vec(vec);
+            println!("CF {:?}\nVEC {:?}", cf, vec);
+        }
+        None => {
+            // Hash not found in table
+            let hash_object = HashObject {
+                vec: cf.into_vec_i32(),
+                eob: res_eob,
+                res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
+            };
+            println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
+            *res_ctx = hash_object.res_ctx;
+            hashmap.insert(hash, hash_object);
+        }
+    }
 
-    eob as i32
+    // context
+    res_eob
 }
 
 #[derive(Clone, Copy)]
