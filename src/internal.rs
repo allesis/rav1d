@@ -1,15 +1,19 @@
-use std::ffi::{c_int, c_uint};
+use std::collections::HashMap;
+use std::ffi::{c_int, c_uint, c_uint};
 use std::mem;
-use std::ops::{Deref, Range};
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::ops::{Deref, Range, Range};
+use std::sync::atomic::{
+    AtomicBool, AtomicI32, AtomicI32, AtomicU32, AtomicU32, Ordering, Ordering,
+};
+use std::sync::{Arc, OnceLock, OnceLock};
 use std::thread::JoinHandle;
 
-use atomig::{Atom, Atomic};
+use atomig::{Atom, Atomic, Atomic};
 use libc::ptrdiff_t;
-use parking_lot::{Condvar, Mutex, RwLock, RwLockReadGuard};
+use parking_lot::{Condvar, Mutex, Mutex, RwLock, RwLock, RwLockReadGuard, RwLockReadGuard};
 use strum::FromRepr;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use to_method::To;
+use zerocopy::{AsBytes, FromBytes, FromBytes, FromZeroes, FromZeroes};
 
 use crate::align::{Align16, Align64, AlignedVec2, AlignedVec64};
 use crate::cdef::Rav1dCdefDSPContext;
@@ -51,7 +55,7 @@ use crate::recon::{
 };
 use crate::refmvs::{Rav1dRefmvsDSPContext, RefMvsFrame, RefMvsTemporalBlock, RefmvsTile};
 use crate::relaxed_atomic::RelaxedAtomic;
-use crate::thread_task::{Rav1dTaskIndex, Rav1dTasks};
+use crate::thread_task::{Rav1dTaskIndex, Rav1dTasks, Rav1dTasks};
 
 #[derive(Default)]
 pub struct Rav1dDSPContext {
@@ -383,6 +387,8 @@ pub struct Rav1dContext {
     pub(crate) logger: Option<Rav1dLogger>,
 
     pub(crate) picture_pool: Arc<MemPool<u8>>,
+
+    pub(crate) hashmap: Option<Arc<Mutex<HashMap<u64, HashObject>>>>,
 }
 
 // SAFETY:
@@ -708,13 +714,18 @@ pub(crate) struct Rav1dFrameContext {
 
 impl Rav1dFrameContext {
     pub fn default(index: usize) -> Self {
-        Self {
+        let ret = Self {
             index,
             data: Default::default(),
             in_cdf: Default::default(),
             task_thread: Default::default(),
             frame_thread_progress: Default::default(),
-        }
+        };
+        ret.data
+            .try_write()
+            .expect("FAILED TO LOCK RWLOCK")
+            .add_hashmap();
+        ret
     }
 
     pub fn in_cdf<'a>(&'a self) -> RwLockReadGuard<'a, CdfThreadContext> {
@@ -788,6 +799,7 @@ pub(crate) struct Rav1dFrameData {
     pub frame_thread: Rav1dFrameContextFrameThread,
     pub lf: Rav1dFrameContextLf,
     pub lowest_pixel_mem: DisjointMut<Vec<[[c_int; 2]; 7]>>,
+    pub hashmap: Option<Arc<Mutex<HashMap<u64, HashObject>>>>,
 }
 
 impl Rav1dFrameData {
@@ -802,6 +814,10 @@ impl Rav1dFrameData {
 
     pub fn seq_hdr(&self) -> &Rav1dSequenceHeader {
         self.seq_hdr.as_ref().unwrap()
+    }
+
+    pub fn add_hashmap(&mut self) {
+        self.hashmap = Some(Arc::new(Mutex::new(HashMap::new())));
     }
 }
 
@@ -899,6 +915,25 @@ impl Cf {
 
     pub fn select_mut<BD: BitDepth>(&mut self) -> &mut [BD::Coef; CF_LEN] {
         FromBytes::mut_from_prefix(AsBytes::as_bytes_mut(&mut self.0)).unwrap()
+    }
+
+    pub fn into_vec_32<BD: BitDepth>(&mut self) -> Vec<i32> {
+        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
+        vec
+    }
+}
+
+impl From<Vec<i32>> for Cf {
+    fn from(vec: Vec<i32>) -> Self {
+        let array: [i32; CF_LEN] = vec.try_into().expect("Failed to convert to array");
+        Cf(array)
+    }
+}
+
+impl Into<Vec<i32>> for Cf {
+    fn into(self) -> Vec<i32> {
+        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
+        vec
     }
 }
 
@@ -1160,4 +1195,10 @@ impl Rav1dTaskContext {
             task_thread,
         }
     }
+}
+
+pub struct HashObject {
+    pub vec: Vec<i32>,
+    pub eob: i32,
+    pub res_ctx: u8,
 }
