@@ -93,6 +93,7 @@ use parking_lot::Condvar;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use parking_lot::RwLockReadGuard;
+use std::collections::HashMap;
 use std::ffi::c_int;
 use std::ffi::c_uint;
 use std::mem;
@@ -106,6 +107,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use std::thread::JoinHandle;
 use strum::FromRepr;
+use to_method::To;
 use zerocopy::AsBytes;
 use zerocopy::FromBytes;
 use zerocopy::FromZeroes;
@@ -440,6 +442,8 @@ pub struct Rav1dContext {
     pub(crate) logger: Option<Rav1dLogger>,
 
     pub(crate) picture_pool: Arc<MemPool<u8>>,
+
+    pub(crate) hashmap: Option<Arc<Mutex<HashMap<u64, HashObject>>>>,
 }
 
 // SAFETY:
@@ -765,13 +769,18 @@ pub(crate) struct Rav1dFrameContext {
 
 impl Rav1dFrameContext {
     pub fn default(index: usize) -> Self {
-        Self {
+        let ret = Self {
             index,
             data: Default::default(),
             in_cdf: Default::default(),
             task_thread: Default::default(),
             frame_thread_progress: Default::default(),
-        }
+        };
+        ret.data
+            .try_write()
+            .expect("FAILED TO LOCK RWLOCK")
+            .add_hashmap();
+        ret
     }
 
     pub fn in_cdf<'a>(&'a self) -> RwLockReadGuard<'a, CdfThreadContext> {
@@ -845,6 +854,7 @@ pub(crate) struct Rav1dFrameData {
     pub frame_thread: Rav1dFrameContextFrameThread,
     pub lf: Rav1dFrameContextLf,
     pub lowest_pixel_mem: DisjointMut<Vec<[[c_int; 2]; 7]>>,
+    pub hashmap: Option<Arc<Mutex<HashMap<u64, HashObject>>>>,
 }
 
 impl Rav1dFrameData {
@@ -859,6 +869,10 @@ impl Rav1dFrameData {
 
     pub fn seq_hdr(&self) -> &Rav1dSequenceHeader {
         self.seq_hdr.as_ref().unwrap()
+    }
+
+    pub fn add_hashmap(&mut self) {
+        self.hashmap = Some(Arc::new(Mutex::new(HashMap::new())));
     }
 }
 
@@ -956,6 +970,25 @@ impl Cf {
 
     pub fn select_mut<BD: BitDepth>(&mut self) -> &mut [BD::Coef; CF_LEN] {
         FromBytes::mut_from_prefix(AsBytes::as_bytes_mut(&mut self.0)).unwrap()
+    }
+
+    pub fn into_vec_32<BD: BitDepth>(&mut self) -> Vec<i32> {
+        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
+        vec
+    }
+}
+
+impl From<Vec<i32>> for Cf {
+    fn from(vec: Vec<i32>) -> Self {
+        let array: [i32; CF_LEN] = vec.try_into().expect("Failed to convert to array");
+        Cf(array)
+    }
+}
+
+impl Into<Vec<i32>> for Cf {
+    fn into(self) -> Vec<i32> {
+        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
+        vec
     }
 }
 
@@ -1217,4 +1250,10 @@ impl Rav1dTaskContext {
             task_thread,
         }
     }
+}
+
+pub struct HashObject {
+    pub vec: Vec<i32>,
+    pub eob: i32,
+    pub res_ctx: u8,
 }
