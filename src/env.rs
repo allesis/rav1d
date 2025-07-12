@@ -10,8 +10,8 @@ use crate::include::dav1d::headers::{
 };
 use crate::internal::Bxy;
 use crate::levels::{
-    BlockLevel, BlockPartition, CompInterType, Mv, SegmentId, TxfmSize, TxfmType, DCT_DCT, H_ADST,
-    H_FLIPADST, IDTX, V_ADST, V_FLIPADST,
+    BlockLevel, BlockPartition, CompInterType, DCT_DCT, H_ADST, H_FLIPADST, IDTX, Mv, SegmentId,
+    TxfmSize, TxfmType, V_ADST, V_FLIPADST,
 };
 use crate::refmvs::RefMvsCandidate;
 use crate::tables::TxfmInfo;

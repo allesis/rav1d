@@ -1,9 +1,9 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use std::ffi::{c_int, c_void};
-use std::ptr::{fn_addr_eq, NonNull};
-use std::sync::atomic::AtomicU32;
+use std::ptr::{NonNull, fn_addr_eq};
 use std::sync::Arc;
+use std::sync::atomic::AtomicU32;
 use std::{mem, ptr};
 
 use bitflags::bitflags;
@@ -18,7 +18,7 @@ use crate::include::dav1d::headers::{
     Rav1dFrameHeader, Rav1dITUTT35, Rav1dMasteringDisplay, Rav1dPixelLayout, Rav1dSequenceHeader,
 };
 use crate::include::dav1d::picture::{
-    Dav1dPicture, Rav1dPicAllocator, Rav1dPicture, Rav1dPictureParameters, RAV1D_PICTURE_ALIGNMENT,
+    Dav1dPicture, RAV1D_PICTURE_ALIGNMENT, Rav1dPicAllocator, Rav1dPicture, Rav1dPictureParameters,
 };
 use crate::internal::{Rav1dFrameContext, Rav1dFrameData};
 use crate::log::{Rav1dLog as _, Rav1dLogger};

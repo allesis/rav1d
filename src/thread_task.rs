@@ -2,8 +2,8 @@ use std::ffi::{c_int, c_uint};
 use std::num::NonZeroU32;
 use std::ops::{Add, AddAssign, Deref};
 use std::process::abort;
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::{cmp, mem, thread};
 
 use atomig::{Atom, Atomic};
@@ -17,10 +17,10 @@ use crate::decode::{
 use crate::error::{Rav1dError, Rav1dResult};
 use crate::fg_apply::{rav1d_apply_grain_row, rav1d_prep_grain};
 use crate::filmgrain::FG_BLOCK_SIZE;
-#[cfg(feature = "bitdepth_16")]
-use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
+#[cfg(feature = "bitdepth_16")]
+use crate::include::common::bitdepth::BitDepth16;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::headers::Rav1dPixelLayout;
 use crate::include::dav1d::picture::Rav1dPicture;

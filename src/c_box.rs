@@ -4,7 +4,7 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::pin::Pin;
-use std::ptr::{drop_in_place, NonNull};
+use std::ptr::{NonNull, drop_in_place};
 
 use crate::send_sync_non_null::SendSyncNonNull;
 

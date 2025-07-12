@@ -22,7 +22,7 @@ use crate::include::common::bitdepth::bd_fn;
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
 use crate::include::common::bitdepth::bpc_fn;
 use crate::include::common::bitdepth::{
-    AsPrimitive, BitDepth, DynPixel, LeftPixelRow, ToPrimitive, BPC,
+    AsPrimitive, BPC, BitDepth, DynPixel, LeftPixelRow, ToPrimitive,
 };
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::picture::{
@@ -45,11 +45,7 @@ bitflags! {
 
 impl LrEdgeFlags {
     pub const fn select(&self, select: bool) -> Self {
-        if select {
-            *self
-        } else {
-            Self::empty()
-        }
+        if select { *self } else { Self::empty() }
     }
 }
 

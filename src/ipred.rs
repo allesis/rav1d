@@ -8,7 +8,7 @@ use strum::FromRepr;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::cpu::CpuFlags;
-use crate::enum_map::{enum_map, enum_map_ty, DefaultValue};
+use crate::enum_map::{DefaultValue, enum_map, enum_map_ty};
 use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
@@ -17,7 +17,7 @@ use crate::ffi_safe::FFISafe;
 use crate::include::common::bitdepth::bd_fn;
 #[cfg(all(feature = "asm", target_arch = "x86_64"))]
 use crate::include::common::bitdepth::bpc_fn;
-use crate::include::common::bitdepth::{AsPrimitive, BitDepth, DynPixel, BPC};
+use crate::include::common::bitdepth::{AsPrimitive, BPC, BitDepth, DynPixel};
 use crate::include::common::intops::{apply_sign, iclip};
 use crate::include::dav1d::headers::Rav1dPixelLayoutSubSampled;
 use crate::include::dav1d::picture::{
@@ -30,7 +30,7 @@ use crate::levels::{
 };
 use crate::strided::Strided as _;
 use crate::tables::{
-    dav1d_dr_intra_derivative, dav1d_filter_intra_taps, dav1d_sm_weights, filter_fn, FLT_INCR,
+    FLT_INCR, dav1d_dr_intra_derivative, dav1d_filter_intra_taps, dav1d_sm_weights, filter_fn,
 };
 use crate::wrap_fn_ptr::wrap_fn_ptr;
 
@@ -1433,10 +1433,10 @@ mod neon {
     use to_method::To;
 
     use super::*;
-    #[cfg(feature = "bitdepth_16")]
-    use crate::include::common::bitdepth::BitDepth16;
     #[cfg(feature = "bitdepth_8")]
     use crate::include::common::bitdepth::BitDepth8;
+    #[cfg(feature = "bitdepth_16")]
+    use crate::include::common::bitdepth::BitDepth16;
 
     wrap_fn_ptr!(unsafe extern "C" fn z13_fill(
         dst: *mut DynPixel,

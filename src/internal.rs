@@ -14,12 +14,12 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 use crate::align::{Align16, Align64, AlignedVec2, AlignedVec64};
 use crate::cdef::Rav1dCdefDSPContext;
 use crate::cdf::{CdfContext, CdfThreadContext};
-use crate::cpu::{rav1d_get_cpu_flags, CpuFlags};
+use crate::cpu::{CpuFlags, rav1d_get_cpu_flags};
 use crate::disjoint_mut::{DisjointImmutGuard, DisjointMut, DisjointMutArcSlice, DisjointMutGuard};
 use crate::env::BlockContext;
 use crate::error::Rav1dError;
-use crate::filmgrain::{Rav1dFilmGrainDSPContext, GRAIN_HEIGHT, GRAIN_WIDTH};
-use crate::include::common::bitdepth::{BitDepth, BitDepth16, BitDepth8, BPC};
+use crate::filmgrain::{GRAIN_HEIGHT, GRAIN_WIDTH, Rav1dFilmGrainDSPContext};
+use crate::include::common::bitdepth::{BPC, BitDepth, BitDepth8, BitDepth16};
 use crate::include::dav1d::common::Rav1dDataProps;
 use crate::include::dav1d::data::Rav1dData;
 use crate::include::dav1d::dav1d::{Rav1dDecodeFrameType, Rav1dEventFlags, Rav1dInloopFilterType};
@@ -42,11 +42,12 @@ use crate::pal::Rav1dPalDSPContext;
 use crate::picture::{PictureFlags, Rav1dThreadPicture};
 use crate::pool::MemPool;
 use crate::recon::{
-    rav1d_backup_ipred_edge, rav1d_copy_pal_block_uv, rav1d_copy_pal_block_y, rav1d_filter_sbrow,
-    rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_deblock_cols, rav1d_filter_sbrow_deblock_rows,
-    rav1d_filter_sbrow_lr, rav1d_filter_sbrow_resize, rav1d_read_coef_blocks, rav1d_read_pal_plane,
-    rav1d_read_pal_uv, rav1d_recon_b_inter, rav1d_recon_b_intra, BackupIpredEdgeFn, CopyPalBlockFn,
-    FilterSbrowFn, ReadCoefBlocksFn, ReadPalPlaneFn, ReadPalUVFn, ReconBInterFn, ReconBIntraFn,
+    BackupIpredEdgeFn, CopyPalBlockFn, FilterSbrowFn, ReadCoefBlocksFn, ReadPalPlaneFn,
+    ReadPalUVFn, ReconBInterFn, ReconBIntraFn, rav1d_backup_ipred_edge, rav1d_copy_pal_block_uv,
+    rav1d_copy_pal_block_y, rav1d_filter_sbrow, rav1d_filter_sbrow_cdef,
+    rav1d_filter_sbrow_deblock_cols, rav1d_filter_sbrow_deblock_rows, rav1d_filter_sbrow_lr,
+    rav1d_filter_sbrow_resize, rav1d_read_coef_blocks, rav1d_read_pal_plane, rav1d_read_pal_uv,
+    rav1d_recon_b_inter, rav1d_recon_b_intra,
 };
 use crate::refmvs::{Rav1dRefmvsDSPContext, RefMvsFrame, RefMvsTemporalBlock, RefmvsTile};
 use crate::relaxed_atomic::RelaxedAtomic;

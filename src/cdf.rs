@@ -2,18 +2,18 @@
 
 use std::cmp;
 use std::ffi::c_uint;
-use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU32;
 
 use parking_lot::{RwLock, RwLockWriteGuard};
 use strum::EnumCount;
 
-use crate::align::{Align16, Align32, Align4, Align8};
+use crate::align::{Align4, Align8, Align16, Align32};
 use crate::error::Rav1dResult;
 use crate::include::dav1d::headers::{Rav1dFilterMode, Rav1dFrameHeader};
 use crate::levels::{
-    BlockLevel, BlockPartition, BlockSize, MVJoint, SegmentId, TxfmSize, N_COMP_INTER_PRED_MODES,
-    N_INTRA_PRED_MODES, N_UV_INTRA_PRED_MODES,
+    BlockLevel, BlockPartition, BlockSize, MVJoint, N_COMP_INTER_PRED_MODES, N_INTRA_PRED_MODES,
+    N_UV_INTRA_PRED_MODES, SegmentId, TxfmSize,
 };
 use crate::tables::DAV1D_PARTITION_TYPE_COUNT;
 
