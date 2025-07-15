@@ -1256,4 +1256,5 @@ pub struct HashObject {
     pub vec: Vec<i32>,
     pub eob: i32,
     pub res_ctx: u8,
+    pub txtp: TxfmType,
 }

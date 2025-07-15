@@ -538,7 +538,51 @@ fn decode_coefs<BD: BitDepth>(
     txtp: &mut TxfmType,
     res_ctx: &mut u8,
 ) -> c_int {
-    let mut hashmap = f.hashmap.clone();
+    struct Cf<'a, BD: BitDepth>(&'a mut [BD::Coef]);
+
+    impl<'a, BD: BitDepth> Cf<'a, BD> {
+        fn index(&self, rc: u16) -> usize {
+            let i = rc as usize & (self.0.len() - 1);
+            // SAFETY: `self.0.len()` is either `cf_len` or `CF_LEN`,
+            // both of which are powers of 2.
+            // `cf_len` is a power of 2 since it's from `1 << n`, etc.
+            // Thus, `& (self.0.len() - 1)` is the same as `% self.0.len()`.
+            unsafe { assert_unchecked(i < self.0.len()) };
+            i
+        }
+
+        #[cfg_attr(debug_assertions, track_caller)]
+        pub fn get(&self, rc: u16) -> i32 {
+            self.0[self.index(rc)].into()
+        }
+
+        #[cfg_attr(debug_assertions, track_caller)]
+        pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
+            self.0[self.index(rc)] = value.as_();
+        }
+        pub fn into_vec_i32(&self) -> Vec<i32> {
+            self.0
+                .iter()
+                .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
+                .collect()
+        }
+        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
+            vec.iter().enumerate().for_each(|(i, v)| {
+                self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
+            });
+        }
+    }
+    impl<'a, BD: BitDepth> std::fmt::Debug for Cf<'a, BD> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let values: Vec<i32> = self
+                .0
+                .iter()
+                .map(|&c| c.try_into().unwrap_or_default())
+                .collect();
+            f.debug_struct("Cf").field("coefs_i32", &values).finish()
+        }
+    }
+    let mut hashmap = f.hashmap.clone().expect("FAILED TO FIND HASHMAP");
     let dc_sign_ctx;
     let dc_sign;
     let mut dc_dq;
@@ -548,6 +592,17 @@ fn decode_coefs<BD: BitDepth>(
     let lossless = frame_hdr.segmentation.lossless[b.seg_id.get()];
     let t_dim = &dav1d_txfm_dimensions[tx as usize];
     let dbg = dbg_block_info && plane != 0 && false;
+    let sw = cmp::min(1 << t_dim.lw, 8) as usize;
+    let sh = cmp::min(1 << t_dim.lh, 8) as usize;
+    let cf_len = sw * 4 * sh * 4;
+    let cf = match cf {
+        CfSelect::Frame(offset) => &mut *f
+            .frame_thread
+            .cf
+            .mut_slice_as((offset as usize.., ..cf_len)),
+        CfSelect::Task => t_cf.select_mut::<BD>(),
+    };
+    let mut cf = Cf::<BD>(cf);
 
     if dbg {
         println!("Start: r={}", ts_c.msac.rng);
@@ -556,7 +611,23 @@ fn decode_coefs<BD: BitDepth>(
     let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
     hash =
         ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
-    println!("HASH IS {:?}", hash);
+    println!("HASH: {:?}", hash);
+    {
+        let hashmap = hashmap.lock();
+        match hashmap.get(&hash) {
+            Some(res) => {
+                // Hash found in table
+                // let vec = &res.vec;
+                // *res_ctx = res.res_ctx;
+                // *txtp = res.txtp;
+                // cf.insert_vec(vec);
+                //return res.eob;
+            }
+            None => (),
+        }
+    }
+
+    // context
 
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
@@ -630,11 +701,7 @@ fn decode_coefs<BD: BitDepth>(
                     &mut ts_c.cdf.m.txtp_inter3[t_dim.min as usize],
                 );
                 idx = bool_idx as u8;
-                if bool_idx {
-                    DCT_DCT
-                } else {
-                    IDTX
-                }
+                if bool_idx { DCT_DCT } else { IDTX }
             } else if t_dim.min == TxfmSize::S16x16 as _ {
                 idx = rav1d_msac_decode_symbol_adapt16(
                     &mut ts_c.msac,
@@ -728,65 +795,6 @@ fn decode_coefs<BD: BitDepth>(
     } else {
         eob_bin as u16
     };
-
-    struct Cf<'a, BD: BitDepth>(&'a mut [BD::Coef]);
-
-    impl<'a, BD: BitDepth> Cf<'a, BD> {
-        fn index(&self, rc: u16) -> usize {
-            let i = rc as usize & (self.0.len() - 1);
-            // SAFETY: `self.0.len()` is either `cf_len` or `CF_LEN`,
-            // both of which are powers of 2.
-            // `cf_len` is a power of 2 since it's from `1 << n`, etc.
-            // Thus, `& (self.0.len() - 1)` is the same as `% self.0.len()`.
-            unsafe { assert_unchecked(i < self.0.len()) };
-            i
-        }
-
-        #[cfg_attr(debug_assertions, track_caller)]
-        pub fn get(&self, rc: u16) -> i32 {
-            self.0[self.index(rc)].into()
-        }
-
-        #[cfg_attr(debug_assertions, track_caller)]
-        pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
-            self.0[self.index(rc)] = value.as_();
-        }
-        pub fn into_vec_i32(&self) -> Vec<i32> {
-            self.0
-                .iter()
-                .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
-                .collect()
-        }
-        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
-            vec.iter().enumerate().for_each(|(i, v)| {
-                let val = self.get(i.try_into().expect("FAILED"));
-                println!("VAL {:?} V {:?}", val, *v);
-                self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
-            });
-        }
-    }
-    impl<'a, BD: BitDepth> std::fmt::Debug for Cf<'a, BD> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let values: Vec<i32> = self
-                .0
-                .iter()
-                .map(|&c| c.try_into().unwrap_or_default())
-                .collect();
-            f.debug_struct("Cf").field("coefs_i32", &values).finish()
-        }
-    }
-
-    let sw = cmp::min(1 << t_dim.lw, 8) as usize;
-    let sh = cmp::min(1 << t_dim.lh, 8) as usize;
-    let cf_len = sw * 4 * sh * 4;
-    let cf = match cf {
-        CfSelect::Frame(offset) => &mut *f
-            .frame_thread
-            .cf
-            .mut_slice_as((offset as usize.., ..cf_len)),
-        CfSelect::Task => t_cf.select_mut::<BD>(),
-    };
-    let mut cf = Cf::<BD>(cf);
 
     // base tokens
     let mut rc;
@@ -1290,32 +1298,16 @@ fn decode_coefs<BD: BitDepth>(
         None => {}
     }
 
-    let mut cf = cf;
-    let hashmap = hashmap.expect("FAILED TO FIND HASHMAP");
     let mut hashmap = hashmap.lock();
-    let mut res_eob = eob as i32;
-    match hashmap.get(&hash) {
-        Some(res) => {
-            // Hash found in table
-            let vec = &res.vec;
-            res_eob = res.eob;
-            *res_ctx = res.res_ctx;
-            println!("CF {:?}\nVEC {:?}", cf, vec);
-            cf.insert_vec(vec);
-            println!("CF {:?}\nVEC {:?}", cf, vec);
-        }
-        None => {
-            // Hash not found in table
-            let hash_object = HashObject {
-                vec: cf.into_vec_i32(),
-                eob: res_eob,
-                res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
-            };
-            println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
-            *res_ctx = hash_object.res_ctx;
-            hashmap.insert(hash, hash_object);
-        }
-    }
+    let res_eob = eob as i32;
+    let hash_object = HashObject {
+        vec: cf.into_vec_i32(),
+        eob: res_eob,
+        res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
+        txtp: *txtp,
+    };
+    *res_ctx = hash_object.res_ctx;
+    hashmap.insert(hash, hash_object);
 
     // context
     res_eob
@@ -2758,15 +2750,15 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
-                                            "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={} [x={},cbx4={}]",
-                                            pl,
-                                            b.uvtx,
-                                            txtp,
-                                            eob,
-                                            ts_c.as_deref().unwrap().msac.rng,
-                                            x,
-                                            cbx4,
-                                        );
+                                        "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={} [x={},cbx4={}]",
+                                        pl,
+                                        b.uvtx,
+                                        txtp,
+                                        eob,
+                                        ts_c.as_deref().unwrap().msac.rng,
+                                        x,
+                                        cbx4,
+                                    );
                                 }
                                 CaseSet::<16, true>::many(
                                     [l_ccoef, a_ccoef],
