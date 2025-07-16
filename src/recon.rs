@@ -616,10 +616,6 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let mut cf = Cf::<BD>(cf);
-
-    if dbg {
-        println!("Start: r={}", ts_c.msac.rng);
-    }
     let hash;
     let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
     hash =
@@ -629,17 +625,19 @@ fn decode_coefs<BD: BitDepth>(
         let hashmap = hashmap.lock();
         match hashmap.get(&hash) {
             Some(res) => {
-                // Hash found in table
-                // let vec = &res.vec;
-                // *res_ctx = res.res_ctx;
-                // *txtp = res.txtp;
-                // cf.insert_vec(vec);
-                //return res.eob;
+                let vec = &res.vec;
+                *res_ctx = res.res_ctx;
+                *txtp = res.txtp;
+                cf.insert_vec(vec);
+                return res.eob;
             }
             None => (),
         }
     }
 
+    if dbg {
+        println!("Start: r={}", ts_c.msac.rng);
+    }
     // context
 
     // does this block have any non-zero coefficients
