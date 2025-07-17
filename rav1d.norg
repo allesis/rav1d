@@ -1,0 +1,30 @@
+@document.meta
+title: rav1d
+description: 
+authors: charlie
+categories: 
+created: 2025-05-22T06:40:18-0800
+updated: 2025-05-22T06:45:52-0800
+version: 1.1.1
+@end
+
+* AV1 OBU Info
+** Header
+   Structured as followed:
+   ~ OBU_FORBIDDEN_BIT - 1 bit
+     Never set this, it is forbiddden for some reason
+   ~ OBU_TYPE - 4 bits
+     Indicates the type of the OBU header
+     Is ignored if the decoded doesnt understand it
+     So we can use it freely and possibly get video which still is playable by a noncompatible decoder
+     Types can be:
+   ~~ SEQ_HDR -> 1
+   ~~ TD -> 2
+   ~~ FRAME_HDR -> 3
+   ~~ TILE_GRP -> 4
+   ~~ METADATA -> 5
+   ~~ FRAME -> 6
+   ~~ REDUNDANT_FRAME_HDR -> 7
+   ~~ PADDING -> 15
+
+
