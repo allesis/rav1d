@@ -1,20 +1,19 @@
 use crate::align::Align16;
 use crate::align::AlignedVec64;
 use crate::c_arc::CArc;
-use crate::cdf::CdfMvComponent;
-use crate::cdf::CdfThreadContext;
 use crate::cdf::rav1d_cdf_thread_alloc;
 use crate::cdf::rav1d_cdf_thread_copy;
 use crate::cdf::rav1d_cdf_thread_init_static;
 use crate::cdf::rav1d_cdf_thread_update;
+use crate::cdf::CdfMvComponent;
+use crate::cdf::CdfThreadContext;
 use crate::ctx::CaseSet;
 use crate::dequant_tables::dav1d_dq_tbl;
 use crate::disjoint_mut::DisjointMut;
 use crate::disjoint_mut::DisjointMutSlice;
-use crate::enum_map::DefaultValue;
 use crate::enum_map::enum_map;
 use crate::enum_map::enum_map_ty;
-use crate::env::BlockContext;
+use crate::enum_map::DefaultValue;
 use crate::env::av1_get_bwd_ref_1_ctx;
 use crate::env::av1_get_bwd_ref_ctx;
 use crate::env::av1_get_fwd_ref_1_ctx;
@@ -37,6 +36,7 @@ use crate::env::get_mask_comp_ctx;
 use crate::env::get_partition_ctx;
 use crate::env::get_poc_diff;
 use crate::env::get_tx_ctx;
+use crate::env::BlockContext;
 use crate::error::Rav1dError::EINVAL;
 use crate::error::Rav1dError::ENOPROTOOPT;
 use crate::error::Rav1dResult;
@@ -48,7 +48,6 @@ use crate::include::common::intops::clip;
 use crate::include::common::intops::clip_u8;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::common::Rav1dDataProps;
-use crate::include::dav1d::headers::RAV1D_PRIMARY_REF_NONE;
 use crate::include::dav1d::headers::Rav1dFilterMode;
 use crate::include::dav1d::headers::Rav1dFrameHeader;
 use crate::include::dav1d::headers::Rav1dFrameHeaderTiling;
@@ -59,6 +58,7 @@ use crate::include::dav1d::headers::Rav1dTxfmMode;
 use crate::include::dav1d::headers::Rav1dWarpedMotionParams;
 use crate::include::dav1d::headers::Rav1dWarpedMotionType;
 use crate::include::dav1d::headers::SgrIdx;
+use crate::include::dav1d::headers::RAV1D_PRIMARY_REF_NONE;
 use crate::include::dav1d::picture::Rav1dPicture;
 use crate::internal::Bxy;
 use crate::internal::Rav1dBitDepthDSPContext;
@@ -88,61 +88,61 @@ use crate::levels::Av1BlockIntraInter;
 use crate::levels::BlockLevel;
 use crate::levels::BlockPartition;
 use crate::levels::BlockSize;
-use crate::levels::CFL_PRED;
 use crate::levels::CompInterType;
-use crate::levels::DC_PRED;
 use crate::levels::DrlProximity;
-use crate::levels::FILTER_PRED;
 use crate::levels::Filter2d;
-use crate::levels::GLOBALMV;
-use crate::levels::GLOBALMV_GLOBALMV;
 use crate::levels::InterIntraPredMode;
 use crate::levels::InterIntraType;
 use crate::levels::MVJoint;
 use crate::levels::MotionMode;
 use crate::levels::Mv;
-use crate::levels::N_COMP_INTER_PRED_MODES;
-use crate::levels::N_INTRA_PRED_MODES;
-use crate::levels::N_UV_INTRA_PRED_MODES;
+use crate::levels::SegmentId;
+use crate::levels::TxfmSize;
+use crate::levels::CFL_PRED;
+use crate::levels::DC_PRED;
+use crate::levels::FILTER_PRED;
+use crate::levels::GLOBALMV;
+use crate::levels::GLOBALMV_GLOBALMV;
 use crate::levels::NEARESTMV;
 use crate::levels::NEARESTMV_NEARESTMV;
 use crate::levels::NEARMV;
 use crate::levels::NEWMV;
 use crate::levels::NEWMV_NEWMV;
-use crate::levels::SegmentId;
-use crate::levels::TxfmSize;
+use crate::levels::N_COMP_INTER_PRED_MODES;
+use crate::levels::N_INTRA_PRED_MODES;
+use crate::levels::N_UV_INTRA_PRED_MODES;
 use crate::levels::VERT_LEFT_PRED;
 use crate::levels::VERT_PRED;
-use crate::lf_mask::Av1RestorationUnit;
 use crate::lf_mask::rav1d_calc_eih;
 use crate::lf_mask::rav1d_calc_lf_values;
 use crate::lf_mask::rav1d_create_lf_mask_inter;
 use crate::lf_mask::rav1d_create_lf_mask_intra;
+use crate::lf_mask::Av1RestorationUnit;
 use crate::log::Rav1dLog as _;
 use crate::lr_apply::LrRestorePlanes;
-use crate::msac::MsacContext;
 use crate::msac::rav1d_msac_decode_bool;
 use crate::msac::rav1d_msac_decode_bool_adapt;
 use crate::msac::rav1d_msac_decode_bool_equi;
 use crate::msac::rav1d_msac_decode_bools;
 use crate::msac::rav1d_msac_decode_subexp;
+use crate::msac::rav1d_msac_decode_symbol_adapt16;
 use crate::msac::rav1d_msac_decode_symbol_adapt4;
 use crate::msac::rav1d_msac_decode_symbol_adapt8;
-use crate::msac::rav1d_msac_decode_symbol_adapt16;
 use crate::msac::rav1d_msac_decode_uniform;
+use crate::msac::MsacContext;
 use crate::pal::Rav1dPalDSPContext;
-use crate::picture::Rav1dThreadPicture;
 use crate::picture::rav1d_picture_alloc_copy;
 use crate::picture::rav1d_thread_picture_alloc;
+use crate::picture::Rav1dThreadPicture;
 use crate::qm::dav1d_qm_tbl;
 use crate::recon::debug_block_info;
+use crate::refmvs::rav1d_refmvs_find;
+use crate::refmvs::rav1d_refmvs_init_frame;
+use crate::refmvs::rav1d_refmvs_tile_sbrow_init;
 use crate::refmvs::RefMvsBlock;
 use crate::refmvs::RefMvsFrame;
 use crate::refmvs::RefMvsMvPair;
 use crate::refmvs::RefMvsRefPair;
-use crate::refmvs::rav1d_refmvs_find;
-use crate::refmvs::rav1d_refmvs_init_frame;
-use crate::refmvs::rav1d_refmvs_tile_sbrow_init;
 use crate::relaxed_atomic::RelaxedAtomic;
 use crate::tables::cfl_allowed_mask;
 use crate::tables::dav1d_al_part_ctx;
@@ -159,10 +159,10 @@ use crate::tables::dav1d_wedge_ctx_lut;
 use crate::tables::dav1d_ymode_size_context;
 use crate::tables::interintra_allowed_mask;
 use crate::tables::wedge_allowed_mask;
-use crate::thread_task::FRAME_ERROR;
-use crate::thread_task::TILE_ERROR;
 use crate::thread_task::rav1d_task_create_tile_sbrow;
 use crate::thread_task::rav1d_task_frame_init;
+use crate::thread_task::FRAME_ERROR;
+use crate::thread_task::TILE_ERROR;
 use crate::warpmv::rav1d_find_affine_int;
 use crate::warpmv::rav1d_get_shear_params;
 use crate::warpmv::rav1d_set_affine_mv2d;
@@ -253,7 +253,11 @@ fn read_mv_component_diff(
 
     let diff = ((up << 3 | (fp as u16) << 1 | hp) + 1) as c_int;
 
-    if sign { -diff } else { diff }
+    if sign {
+        -diff
+    } else {
+        diff
+    }
 }
 
 fn read_mv_residual(ts_c: &mut Rav1dTileStateContext, ref_mv: &mut Mv, mv_prec: i32) {
@@ -1919,12 +1923,15 @@ fn decode_b(
 
         // reconstruction
         if t.frame_thread.pass == 1 {
+            println!("READ BLOCKS 1 ENTER");
             (bd_fn.read_coef_blocks)(f, t, ts_c, bs, b);
+            println!("READ BLOCKS 1 EXIT");
         } else {
             (bd_fn.recon_b_intra)(f, t, Some(ts_c), bs, intra_edge_flags, b, &intra);
         }
 
         if f.frame_hdr().loopfilter.level_y != [0, 0] {
+            println!("HEADER");
             let lflvl = match ts.lflvl.get() {
                 TileStateRef::Frame => &f.lf.lvl,
                 TileStateRef::Local => &*ts.lflvlmem.try_read().unwrap(),
@@ -2164,7 +2171,9 @@ fn decode_b(
 
         // reconstruction
         if t.frame_thread.pass == 1 {
+            println!("READ COEF BLOCK 3 ENTER");
             (bd_fn.read_coef_blocks)(f, t, ts_c, bs, b);
+            println!("READ COEF BLOCK 3 EXIT");
         } else {
             (bd_fn.recon_b_inter)(f, t, Some(ts_c), bs, b, &inter)?;
         }
@@ -3051,7 +3060,9 @@ fn decode_b(
 
         // reconstruction
         if t.frame_thread.pass == 1 {
+            println!("READ COEF BLOCK 2 ENTER");
             (bd_fn.read_coef_blocks)(f, t, ts_c, bs, b);
+            println!("READ COEF BLOCK 2 EXIT");
         } else {
             (bd_fn.recon_b_inter)(f, t, Some(ts_c), bs, b, &inter)?;
         }
@@ -3415,6 +3426,7 @@ fn decode_b(
         _ => {}
     }
 
+    println!("EXIT SUCCESSFUL DECODE BLOCK");
     Ok(())
 }
 
@@ -3786,6 +3798,7 @@ fn decode_sb(
         );
     }
 
+    println!("EXIT SUCCESSFUL DECODE_SB");
     Ok(())
 }
 
@@ -4075,19 +4088,31 @@ fn check_trailing_bits_after_symbol_coder(msac: &MsacContext) -> Result<(), ()> 
     let n_bits = -(msac.cnt + 14);
     assert!(n_bits <= 0); // this assumes we errored out when cnt <= -15 in caller
     let n_bytes = (n_bits + 7) >> 3;
+    println!("n_bits: {:?}", n_bits);
+    println!("n_bytes: {:?}", n_bytes);
     let trailing_bytes_offset = msac.buf_index().wrapping_add_signed(n_bytes as isize - 1);
     let trailing_bytes = &msac.data()[trailing_bytes_offset..];
     let pattern = 128 >> ((n_bits - 1) & 7);
     // use x + (x - 1) instead of 2x - 1 to avoid overflow
+    println!(
+        "PATTERN {:?}\nTRAILING {:?}\nRES {:?}",
+        pattern,
+        trailing_bytes[0],
+        (trailing_bytes[0] & (pattern + (pattern - 1)))
+    );
     if (trailing_bytes[0] & (pattern + (pattern - 1))) != pattern {
+        println!("NOT A SINGLE 1");
         return Err(());
     }
 
+    println!("TRAILING BYTES {:?}", trailing_bytes);
     // check remainder zero bytes
     if trailing_bytes[1..].iter().any(|&x| x != 0) {
+        println!("FOUND NONZERO BYTES");
         return Err(());
     }
 
+    println!("OK");
     return Ok(());
 }
 
@@ -4260,6 +4285,7 @@ pub(crate) fn rav1d_decode_tile_sbrow(
                 read_restoration_info(ts, &mut lr, p, frame_type, debug_block_info!(f, t.b));
             }
         }
+        println!("DECODE SB ENTER 1");
         decode_sb(
             c,
             t,
@@ -4268,6 +4294,7 @@ pub(crate) fn rav1d_decode_tile_sbrow(
             root_bl,
             EdgeIndex::root(),
         )?;
+        println!("DECODE SB EXIT 1");
         if t.b.x & 16 != 0 || f.seq_hdr().sb128 != 0 {
             t.a += 1;
             t.lf_mask = t.lf_mask.map(|i| i + 1);
@@ -4323,6 +4350,9 @@ pub(crate) fn rav1d_decode_tile_sbrow(
         && (t.b.y >> f.sb_shift) + 1
             >= f.frame_hdr().tiling.row_start_sb[tile_row as usize + 1].into()
     {
+        println!("TRAILING BITS CHECK");
+        //let mut msac = &mut ts.context.try_lock().unwrap().msac;
+        //return check_trailing_bits_after_symbol_coder(msac);
         return check_trailing_bits_after_symbol_coder(&ts.context.try_lock().unwrap().msac);
     }
     Ok(())
@@ -4841,6 +4871,7 @@ pub(crate) fn rav1d_decode_frame_exit(
                 && rf.progress.as_ref().unwrap()[1].load(Ordering::SeqCst) == FRAME_ERROR
         }) {
             retval = Err(EINVAL);
+            println!("STORED ERROR 4848");
             task_thread.error.store(1, Ordering::SeqCst);
             f.sr_cur.progress.as_mut().unwrap()[1].store(FRAME_ERROR, Ordering::SeqCst);
         }
@@ -4858,6 +4889,12 @@ pub(crate) fn rav1d_decode_frame_exit(
                     if retval.is_ok() { 1 } else { TILE_ERROR as u32 },
                     Ordering::SeqCst,
                 );
+                if progress.load(Ordering::SeqCst) != 1 {
+                    println!(
+                        "PROGRESS IS ERROR in decode {:?}",
+                        progress.load(Ordering::SeqCst)
+                    );
+                }
             }
             let _ = mem::take(&mut f.out_cdf);
         }
@@ -4871,6 +4908,7 @@ pub(crate) fn rav1d_decode_frame_exit(
     f.tiles.clear();
     task_thread.finished.store(true, Ordering::SeqCst);
     *task_thread.retval.try_lock().unwrap() = retval.err();
+    println!("RETVAL {:?}", retval);
     retval
 }
 
@@ -4963,6 +5001,7 @@ pub fn rav1d_submit_frame(c: &Rav1dContext, state: &mut Rav1dState) -> Rav1dResu
         }
         let error = &mut *fc.task_thread.retval.try_lock().unwrap();
         if error.is_some() {
+            // Error occurs here after decode_coefs returns
             state.cached_error = mem::take(&mut *error);
             state.cached_error_props = out_delayed.p.m.clone();
             let _ = mem::take(out_delayed);
@@ -4991,6 +5030,7 @@ pub fn rav1d_submit_frame(c: &Rav1dContext, state: &mut Rav1dState) -> Rav1dResu
         cached_error_props: &mut Rav1dDataProps,
         m: &Rav1dDataProps,
     ) {
+        println!("TASK THREAD ERROR STORE 5001");
         fc.task_thread.error.store(1, Ordering::Relaxed);
         let _ = mem::take(&mut *fc.in_cdf.try_write().unwrap());
         if f.frame_hdr.as_ref().unwrap().refresh_context != 0 {

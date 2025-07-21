@@ -5,9 +5,9 @@ use crate::ctx::CaseSet;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
 use crate::include::common::bitdepth::AsPrimitive;
-use crate::include::common::bitdepth::BPC;
 use crate::include::common::bitdepth::BitDepth;
 use crate::include::common::bitdepth::ToPrimitive;
+use crate::include::common::bitdepth::BPC;
 use crate::include::common::dump::ac_dump;
 use crate::include::common::dump::coef_dump;
 use crate::include::common::dump::hex_dump;
@@ -42,42 +42,41 @@ use crate::levels::Av1BlockInter;
 use crate::levels::Av1BlockIntra;
 use crate::levels::Av1BlockIntraInter;
 use crate::levels::BlockSize;
-use crate::levels::CFL_PRED;
 use crate::levels::CompInterType;
-use crate::levels::DC_PRED;
-use crate::levels::DCT_DCT;
-use crate::levels::FILTER_PRED;
 use crate::levels::Filter2d;
-use crate::levels::GLOBALMV;
-use crate::levels::GLOBALMV_GLOBALMV;
-use crate::levels::IDTX;
 use crate::levels::InterIntraPredMode;
 use crate::levels::InterIntraType;
 use crate::levels::IntraPredMode;
 use crate::levels::MotionMode;
 use crate::levels::Mv;
-use crate::levels::SMOOTH_PRED;
 use crate::levels::TxClass;
 use crate::levels::TxfmSize;
 use crate::levels::TxfmType;
+use crate::levels::CFL_PRED;
+use crate::levels::DCT_DCT;
+use crate::levels::DC_PRED;
+use crate::levels::FILTER_PRED;
+use crate::levels::GLOBALMV;
+use crate::levels::GLOBALMV_GLOBALMV;
+use crate::levels::IDTX;
+use crate::levels::SMOOTH_PRED;
 use crate::levels::WHT_WHT;
 use crate::lf_apply::rav1d_copy_lpf;
 use crate::lf_apply::rav1d_loopfilter_sbrow_cols;
 use crate::lf_apply::rav1d_loopfilter_sbrow_rows;
 use crate::lr_apply::rav1d_lr_sbrow;
-use crate::msac::MsacContext;
 use crate::msac::rav1d_msac_decode_bool_adapt;
 use crate::msac::rav1d_msac_decode_bool_equi;
 use crate::msac::rav1d_msac_decode_bools;
 use crate::msac::rav1d_msac_decode_hi_tok;
+use crate::msac::rav1d_msac_decode_symbol_adapt16;
 use crate::msac::rav1d_msac_decode_symbol_adapt4;
 use crate::msac::rav1d_msac_decode_symbol_adapt8;
-use crate::msac::rav1d_msac_decode_symbol_adapt16;
+use crate::msac::MsacContext;
 use crate::picture::Rav1dThreadPicture;
 use crate::pixels::Pixels as _;
 use crate::scan::dav1d_scans;
 use crate::strided::Strided as _;
-use crate::tables::TxfmInfo;
 use crate::tables::dav1d_filter_2d;
 use crate::tables::dav1d_filter_mode_to_y_mode;
 use crate::tables::dav1d_lo_ctx_offsets;
@@ -86,6 +85,7 @@ use crate::tables::dav1d_tx_type_class;
 use crate::tables::dav1d_tx_types_per_set;
 use crate::tables::dav1d_txfm_dimensions;
 use crate::tables::dav1d_txtp_from_uvmode;
+use crate::tables::TxfmInfo;
 use crate::wedge::dav1d_ii_masks;
 use crate::wedge::dav1d_wedge_masks;
 use crate::with_offset::WithOffset;
@@ -538,6 +538,52 @@ fn decode_coefs<BD: BitDepth>(
     txtp: &mut TxfmType,
     res_ctx: &mut u8,
 ) -> c_int {
+    struct Cf<'a, BD: BitDepth>(&'a mut [BD::Coef]);
+
+    impl<'a, BD: BitDepth> Cf<'a, BD> {
+        fn index(&self, rc: u16) -> usize {
+            let i = rc as usize & (self.0.len() - 1);
+            // SAFETY: `self.0.len()` is either `cf_len` or `CF_LEN`,
+            // both of which are powers of 2.
+            // `cf_len` is a power of 2 since it's from `1 << n`, etc.
+            // Thus, `& (self.0.len() - 1)` is the same as `% self.0.len()`.
+            unsafe { assert_unchecked(i < self.0.len()) };
+            i
+        }
+
+        #[cfg_attr(debug_assertions, track_caller)]
+        pub fn get(&self, rc: u16) -> i32 {
+            self.0[self.index(rc)].into()
+        }
+
+        #[cfg_attr(debug_assertions, track_caller)]
+        pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
+            self.0[self.index(rc)] = value.as_();
+        }
+        pub fn into_vec_i32(&self) -> Vec<i32> {
+            self.0
+                .iter()
+                .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
+                .collect()
+        }
+        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
+            vec.iter().enumerate().for_each(|(i, v)| {
+                let val = self.get(i.try_into().expect("FAILED"));
+                println!("VAL {:?} V {:?}", val, *v);
+                self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
+            });
+        }
+    }
+    impl<'a, BD: BitDepth> std::fmt::Debug for Cf<'a, BD> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let values: Vec<i32> = self
+                .0
+                .iter()
+                .map(|&c| c.try_into().unwrap_or_default())
+                .collect();
+            f.debug_struct("Cf").field("coefs_i32", &values).finish()
+        }
+    }
     let mut hashmap = f.hashmap.clone();
     let dc_sign_ctx;
     let dc_sign;
@@ -552,11 +598,6 @@ fn decode_coefs<BD: BitDepth>(
     if dbg {
         println!("Start: r={}", ts_c.msac.rng);
     }
-    let hash;
-    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
-    hash =
-        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
-    println!("HASH IS {:?}", hash);
 
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
@@ -569,6 +610,42 @@ fn decode_coefs<BD: BitDepth>(
             "Post-non-zero[{}][{}][{}]: r={}",
             t_dim.ctx, sctx, all_skip, ts_c.msac.rng,
         );
+    }
+
+    let sw = cmp::min(1 << t_dim.lw, 8) as usize;
+    let sh = cmp::min(1 << t_dim.lh, 8) as usize;
+    let cf_len = sw * 4 * sh * 4;
+    let cf = match cf {
+        CfSelect::Frame(offset) => &mut *f
+            .frame_thread
+            .cf
+            .mut_slice_as((offset as usize.., ..cf_len)),
+        CfSelect::Task => t_cf.select_mut::<BD>(),
+    };
+    let cf = Cf::<BD>(cf);
+
+    let hash;
+    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
+    hash =
+        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
+    println!("HASH IS {:?}", hash);
+    let mut cf = cf;
+    let hashmap = hashmap.expect("FAILED TO FIND HASHMAP");
+    {
+        let hashmap = hashmap.lock();
+        match hashmap.get(&hash) {
+            Some(res) => {
+                // Hash found in table
+                let vec = &res.vec;
+                *res_ctx = res.res_ctx;
+                println!("CF {:?}\nVEC {:?}", cf, vec);
+                cf.insert_vec(vec);
+                println!("CF {:?}\nVEC {:?}", cf, vec);
+                *txtp = res.txtp;
+                return res.eob as i32;
+            }
+            None => {}
+        }
     }
     if all_skip {
         *res_ctx = 0x40;
@@ -728,66 +805,6 @@ fn decode_coefs<BD: BitDepth>(
     } else {
         eob_bin as u16
     };
-
-    struct Cf<'a, BD: BitDepth>(&'a mut [BD::Coef]);
-
-    impl<'a, BD: BitDepth> Cf<'a, BD> {
-        fn index(&self, rc: u16) -> usize {
-            let i = rc as usize & (self.0.len() - 1);
-            // SAFETY: `self.0.len()` is either `cf_len` or `CF_LEN`,
-            // both of which are powers of 2.
-            // `cf_len` is a power of 2 since it's from `1 << n`, etc.
-            // Thus, `& (self.0.len() - 1)` is the same as `% self.0.len()`.
-            unsafe { assert_unchecked(i < self.0.len()) };
-            i
-        }
-
-        #[cfg_attr(debug_assertions, track_caller)]
-        pub fn get(&self, rc: u16) -> i32 {
-            self.0[self.index(rc)].into()
-        }
-
-        #[cfg_attr(debug_assertions, track_caller)]
-        pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
-            self.0[self.index(rc)] = value.as_();
-        }
-        pub fn into_vec_i32(&self) -> Vec<i32> {
-            self.0
-                .iter()
-                .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
-                .collect()
-        }
-        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
-            vec.iter().enumerate().for_each(|(i, v)| {
-                let val = self.get(i.try_into().expect("FAILED"));
-                println!("VAL {:?} V {:?}", val, *v);
-                self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
-            });
-        }
-    }
-    impl<'a, BD: BitDepth> std::fmt::Debug for Cf<'a, BD> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let values: Vec<i32> = self
-                .0
-                .iter()
-                .map(|&c| c.try_into().unwrap_or_default())
-                .collect();
-            f.debug_struct("Cf").field("coefs_i32", &values).finish()
-        }
-    }
-
-    let sw = cmp::min(1 << t_dim.lw, 8) as usize;
-    let sh = cmp::min(1 << t_dim.lh, 8) as usize;
-    let cf_len = sw * 4 * sh * 4;
-    let cf = match cf {
-        CfSelect::Frame(offset) => &mut *f
-            .frame_thread
-            .cf
-            .mut_slice_as((offset as usize.., ..cf_len)),
-        CfSelect::Task => t_cf.select_mut::<BD>(),
-    };
-    let mut cf = Cf::<BD>(cf);
-
     // base tokens
     let mut rc;
     let mut dc_tok;
@@ -1289,33 +1306,17 @@ fn decode_coefs<BD: BitDepth>(
         }
         None => {}
     }
-
-    let mut cf = cf;
-    let hashmap = hashmap.expect("FAILED TO FIND HASHMAP");
-    let mut hashmap = hashmap.lock();
-    let mut res_eob = eob as i32;
-    match hashmap.get(&hash) {
-        Some(res) => {
-            // Hash found in table
-            let vec = &res.vec;
-            res_eob = res.eob;
-            *res_ctx = res.res_ctx;
-            println!("CF {:?}\nVEC {:?}", cf, vec);
-            cf.insert_vec(vec);
-            println!("CF {:?}\nVEC {:?}", cf, vec);
-        }
-        None => {
-            // Hash not found in table
-            let hash_object = HashObject {
-                vec: cf.into_vec_i32(),
-                eob: res_eob,
-                res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
-            };
-            println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
-            *res_ctx = hash_object.res_ctx;
-            hashmap.insert(hash, hash_object);
-        }
-    }
+    // Hash not found in table
+    let res_eob = eob as i32;
+    let hash_object = HashObject {
+        vec: cf.into_vec_i32(),
+        eob: res_eob,
+        res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
+        txtp: *txtp,
+    };
+    println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
+    *res_ctx = hash_object.res_ctx;
+    hashmap.lock().insert(hash, hash_object);
 
     // context
     res_eob
@@ -1459,6 +1460,7 @@ fn read_coef_tree<BD: BitDepth>(
                 &mut txtp,
                 &mut cf_ctx,
             );
+            println!("RECON 1463");
             if debug_block_info!(f, t.b) {
                 println!(
                     "Post-y-cf-blk[tx={:?},txtp={},eob={}]: r={}",
@@ -1642,6 +1644,7 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
                                 &mut txtp,
                                 &mut cf_ctx,
                             );
+                            println!("RECON 1647");
                             if debug_block_info!(f, t.b) {
                                 println!(
                                     "Post-y-cf-blk[tx={:?},txtp={},eob={}]: r={}",
@@ -1723,6 +1726,7 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
                             &mut txtp,
                             &mut cf_ctx,
                         );
+                        println!("RECON 1729");
                         if debug_block_info!(f, t.b) {
                             println!(
                                 "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={}",
@@ -2383,6 +2387,7 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 &mut txtp,
                                 &mut cf_ctx,
                             );
+                            println!("RECON 2390");
                             cf = t.cf.select_mut::<BD>();
                             if debug_block_info!(f, t.b) {
                                 println!(
@@ -2755,6 +2760,7 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                     &mut txtp,
                                     &mut cf_ctx,
                                 );
+                                println!("RECON 2763");
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
@@ -3638,6 +3644,7 @@ pub(crate) fn rav1d_recon_b_inter<BD: BitDepth>(
                                     &mut txtp,
                                     &mut cf_ctx,
                                 );
+                                println!("RECON 3647");
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(

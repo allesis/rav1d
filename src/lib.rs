@@ -666,6 +666,7 @@ fn gen_picture(c: &Rav1dContext, state: &mut Rav1dState) -> Rav1dResult {
         }
         len?;
     }
+    println!("GEN PICTURE");
     Ok(())
 }
 
@@ -717,12 +718,17 @@ pub unsafe extern "C" fn dav1d_send_data(
 pub(crate) fn rav1d_get_picture(c: &Rav1dContext, out: &mut Rav1dPicture) -> Rav1dResult {
     let state = &mut *c.state.try_lock().unwrap();
     let drain = mem::replace(&mut state.drain, true);
+    println!("RAV1D GET PICTURE");
     gen_picture(c, state)?;
+    println!("GOT PICTURE");
     mem::take(&mut state.cached_error).err_or(())?;
+    println!("PASSED CACHED ERROR");
     if output_picture_ready(c, state, c.fc.len() == 1) {
+        println!("OUT IMAGE");
         return output_image(c, state, out);
     }
     if c.fc.len() > 1 && drain {
+        println!("DRAIN PIC");
         return drain_picture(c, state, out);
     }
     Err(EAGAIN)
