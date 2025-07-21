@@ -82,6 +82,7 @@ impl Debug {
 }
 
 fn check_trailing_bits(gb: &mut GetBits, strict_std_compliance: bool) -> Rav1dResult {
+    println!("CHECKING TRAILING BITS");
     let trailing_one_bit = gb.get_bit();
 
     if gb.has_error() != 0 {
@@ -89,6 +90,7 @@ fn check_trailing_bits(gb: &mut GetBits, strict_std_compliance: bool) -> Rav1dRe
     }
 
     if !strict_std_compliance {
+        println!("NOT STD CMPL");
         return Ok(());
     }
 
@@ -102,6 +104,7 @@ fn check_trailing_bits(gb: &mut GetBits, strict_std_compliance: bool) -> Rav1dRe
         return Err(Rav1dError::InvalidArgument);
     }
 
+    println!("TRAILING SUCCESSFUL");
     Ok(())
 }
 
@@ -2201,6 +2204,7 @@ fn parse_obus(
         data.slice_in_place(..gb.remaining_len());
         // Ensure tile groups are in order and sane; see 6.10.1.
         if hdr.start > hdr.end || hdr.start != state.n_tiles {
+            println!("2237 ERrOR");
             state.tiles.clear();
             state.n_tiles = 0;
             return Err(Rav1dError::InvalidArgument);
@@ -2522,6 +2526,7 @@ fn parse_obus(
                 let error = &mut *fc.task_thread.retval.try_lock().unwrap();
                 if error.is_some() {
                     state.cached_error = mem::take(error);
+                    println!("2561 {:?}", state.cached_error);
                     state.cached_error_props = out_delayed.p.m.clone();
                     let _ = mem::take(out_delayed);
                 } else if out_delayed.p.data.is_some() {
@@ -2603,6 +2608,7 @@ fn parse_obus(
         }
     }
 
+    println!("PARSED OBU");
     Ok(())
 }
 

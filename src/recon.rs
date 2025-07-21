@@ -594,7 +594,7 @@ fn decode_coefs<BD: BitDepth>(
             f.debug_struct("Cf").field("coefs_i32", &values).finish()
         }
     }
-    let mut hashmap = f.hashmap.clone().expect("FAILED TO FIND HASHMAP");
+    let mut hashmap = f.hashmap.clone();
     let dc_sign_ctx;
     let dc_sign;
     let mut dc_dq;
@@ -605,40 +605,10 @@ fn decode_coefs<BD: BitDepth>(
     let t_dim = &DAV1D_TXFM_DIMENSIONS[tx as usize];
     #[expect(clippy::overly_complex_bool_expr, reason = "used for debugging")]
     let dbg = dbg_block_info && plane != 0 && false;
-    let sw = cmp::min(1 << t_dim.lw, 8) as usize;
-    let sh = cmp::min(1 << t_dim.lh, 8) as usize;
-    let cf_len = sw * 4 * sh * 4;
-    let cf = match cf {
-        CfSelect::Frame(offset) => &mut *f
-            .frame_thread
-            .cf
-            .mut_slice_as((offset as usize.., ..cf_len)),
-        CfSelect::Task => t_cf.select_mut::<BD>(),
-    };
-    let mut cf = Cf::<BD>(cf);
-    let hash;
-    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
-    hash =
-        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
-    println!("HASH: {:?}", hash);
-    {
-        let hashmap = hashmap.lock();
-        match hashmap.get(&hash) {
-            Some(res) => {
-                let vec = &res.vec;
-                *res_ctx = res.res_ctx;
-                *txtp = res.txtp;
-                cf.insert_vec(vec);
-                return res.eob;
-            }
-            None => (),
-        }
-    }
 
     if dbg {
         println!("Start: r={}", ts_c.msac.rng);
     }
-    // context
 
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
@@ -651,6 +621,42 @@ fn decode_coefs<BD: BitDepth>(
             "Post-non-zero[{}][{}][{}]: r={}",
             t_dim.ctx, sctx, all_skip, ts_c.msac.rng,
         );
+    }
+
+    let sw = cmp::min(1 << t_dim.lw, 8) as usize;
+    let sh = cmp::min(1 << t_dim.lh, 8) as usize;
+    let cf_len = sw * 4 * sh * 4;
+    let cf = match cf {
+        CfSelect::Frame(offset) => &mut *f
+            .frame_thread
+            .cf
+            .mut_slice_as((offset as usize.., ..cf_len)),
+        CfSelect::Task => t_cf.select_mut::<BD>(),
+    };
+    let cf = Cf::<BD>(cf);
+
+    let hash;
+    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
+    hash =
+        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
+    println!("HASH IS {:?}", hash);
+    let mut cf = cf;
+    let hashmap = hashmap.expect("FAILED TO FIND HASHMAP");
+    {
+        let hashmap = hashmap.lock();
+        match hashmap.get(&hash) {
+            Some(res) => {
+                // Hash found in table
+                let vec = &res.vec;
+                *res_ctx = res.res_ctx;
+                println!("CF {:?}\nVEC {:?}", cf, vec);
+                cf.insert_vec(vec);
+                println!("CF {:?}\nVEC {:?}", cf, vec);
+                *txtp = res.txtp;
+                return res.eob as i32;
+            }
+            None => {}
+        }
     }
     if all_skip {
         *res_ctx = 0x40;
@@ -806,7 +812,6 @@ fn decode_coefs<BD: BitDepth>(
     } else {
         eob_bin as u16
     };
-
     // base tokens
     let mut rc;
     let mut dc_tok;
@@ -1366,8 +1371,7 @@ fn decode_coefs<BD: BitDepth>(
         }
         None => {}
     }
-
-    let mut hashmap = hashmap.lock();
+    // Hash not found in table
     let res_eob = eob as i32;
     let hash_object = HashObject {
         vec: cf.into_vec_i32(),
@@ -1375,8 +1379,9 @@ fn decode_coefs<BD: BitDepth>(
         res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
         txtp: *txtp,
     };
+    println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
     *res_ctx = hash_object.res_ctx;
-    hashmap.insert(hash, hash_object);
+    hashmap.lock().insert(hash, hash_object);
 
     // context
     res_eob
@@ -1520,6 +1525,7 @@ fn read_coef_tree<BD: BitDepth>(
                 &mut txtp,
                 &mut cf_ctx,
             );
+            println!("RECON 1463");
             if debug_block_info!(f, t.b) {
                 println!(
                     "Post-y-cf-blk[tx={:?},txtp={},eob={}]: r={}",
@@ -1703,6 +1709,7 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
                                 &mut txtp,
                                 &mut cf_ctx,
                             );
+                            println!("RECON 1647");
                             if debug_block_info!(f, t.b) {
                                 println!(
                                     "Post-y-cf-blk[tx={:?},txtp={},eob={}]: r={}",
@@ -1784,6 +1791,7 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
                             &mut txtp,
                             &mut cf_ctx,
                         );
+                        println!("RECON 1729");
                         if debug_block_info!(f, t.b) {
                             println!(
                                 "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={}",
@@ -2444,6 +2452,7 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 &mut txtp,
                                 &mut cf_ctx,
                             );
+                            println!("RECON 2390");
                             cf = t.cf.select_mut::<BD>();
                             if debug_block_info!(f, t.b) {
                                 println!(
@@ -2816,6 +2825,7 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                     &mut txtp,
                                     &mut cf_ctx,
                                 );
+                                println!("RECON 2763");
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
@@ -3699,6 +3709,7 @@ pub(crate) fn rav1d_recon_b_inter<BD: BitDepth>(
                                     &mut txtp,
                                     &mut cf_ctx,
                                 );
+                                println!("RECON 3647");
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
