@@ -15,6 +15,12 @@ use crate::include::dav1d::data::Rav1dData;
 use crate::include::dav1d::dav1d::Rav1dDecodeFrameType;
 use crate::include::dav1d::headers::DRav1d;
 use crate::include::dav1d::headers::Dav1dSequenceHeader;
+use crate::include::dav1d::headers::RAV1D_MAX_CDEF_STRENGTHS;
+use crate::include::dav1d::headers::RAV1D_MAX_OPERATING_POINTS;
+use crate::include::dav1d::headers::RAV1D_MAX_TILE_COLS;
+use crate::include::dav1d::headers::RAV1D_MAX_TILE_ROWS;
+use crate::include::dav1d::headers::RAV1D_PRIMARY_REF_NONE;
+use crate::include::dav1d::headers::RAV1D_REFS_PER_FRAME;
 use crate::include::dav1d::headers::Rav1dAdaptiveBoolean;
 use crate::include::dav1d::headers::Rav1dChromaSamplePosition;
 use crate::include::dav1d::headers::Rav1dColorPrimaries;
@@ -54,20 +60,14 @@ use crate::include::dav1d::headers::Rav1dTransferCharacteristics;
 use crate::include::dav1d::headers::Rav1dTxfmMode;
 use crate::include::dav1d::headers::Rav1dWarpedMotionParams;
 use crate::include::dav1d::headers::Rav1dWarpedMotionType;
-use crate::include::dav1d::headers::RAV1D_MAX_CDEF_STRENGTHS;
-use crate::include::dav1d::headers::RAV1D_MAX_OPERATING_POINTS;
-use crate::include::dav1d::headers::RAV1D_MAX_TILE_COLS;
-use crate::include::dav1d::headers::RAV1D_MAX_TILE_ROWS;
-use crate::include::dav1d::headers::RAV1D_PRIMARY_REF_NONE;
-use crate::include::dav1d::headers::RAV1D_REFS_PER_FRAME;
 use crate::internal::Rav1dContext;
 use crate::internal::Rav1dState;
 use crate::internal::Rav1dTileGroup;
 use crate::internal::Rav1dTileGroupHeader;
 use crate::levels::ObuMetaType;
 use crate::log::Rav1dLog as _;
-use crate::picture::rav1d_picture_copy_props;
 use crate::picture::PictureFlags;
+use crate::picture::rav1d_picture_copy_props;
 use crate::thread_task::FRAME_ERROR;
 use std::array;
 use std::cmp;
@@ -75,8 +75,8 @@ use std::ffi::c_int;
 use std::ffi::c_uint;
 use std::fmt;
 use std::mem;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 struct Debug {
     enabled: bool,
@@ -1396,9 +1396,11 @@ fn parse_restoration(
         };
 
         unit_size = match r#type {
-            [Rav1dRestorationType::None, Rav1dRestorationType::None, Rav1dRestorationType::None] => {
-                [8, 0]
-            }
+            [
+                Rav1dRestorationType::None,
+                Rav1dRestorationType::None,
+                Rav1dRestorationType::None,
+            ] => [8, 0],
             _ => {
                 // Log2 of the restoration unit size.
                 let mut unit_size_0 = 6 + seqhdr.sb128;
@@ -2169,6 +2171,7 @@ fn parse_obus(
         state.n_tiles = 0;
     }
 
+    println!("PARSE HEADER");
     // obu header
     let obu_forbidden_bit = gb.get_bit();
     if c.strict_std_compliance && obu_forbidden_bit {
@@ -2194,6 +2197,7 @@ fn parse_obus(
         gb.set_remaining_len(len).ok_or(EINVAL)?;
     }
     if gb.has_error() != 0 {
+        println!("PARSE HEADER HAS ERROR");
         return Err(EINVAL);
     }
 

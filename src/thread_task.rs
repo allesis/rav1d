@@ -9,10 +9,10 @@ use crate::error::Rav1dResult;
 use crate::fg_apply::rav1d_apply_grain_row;
 use crate::fg_apply::rav1d_prep_grain;
 use crate::filmgrain::FG_BLOCK_SIZE;
-#[cfg(feature = "bitdepth_16")]
-use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
+#[cfg(feature = "bitdepth_16")]
+use crate::include::common::bitdepth::BitDepth16;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::headers::Rav1dPixelLayout;
 use crate::include::dav1d::picture::Rav1dPicture;
@@ -44,10 +44,10 @@ use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Deref;
 use std::process::abort;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 
 pub const FRAME_ERROR: u32 = u32::MAX - 1;
@@ -816,6 +816,7 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             continue 'outer;
         }
 
+        println!("START OF FOUND");
         let (fc, t_idx, prev_t) = 'found: {
             if c.fc.len() > 1 {
                 // run init tasks second
@@ -869,6 +870,10 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             while (ttd.cur.get() as usize) < c.fc.len() {
                 let first = ttd.first.load(Ordering::SeqCst);
                 let fc = &c.fc[(first + ttd.cur.get()) as usize % c.fc.len()];
+                println!(
+                    "LOOP HAS ERROR VALUE OF {:?}",
+                    fc.task_thread.error.load(Ordering::SeqCst)
+                );
                 let tasks = &fc.task_thread.tasks;
                 tasks.merge_pending_frame(c);
                 let mut prev_t = tasks.cur_prev.get();
@@ -1050,7 +1055,10 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         if fc.task_thread.error.load(Ordering::SeqCst) == 0 {
                             res_0 = rav1d_decode_frame_init_cdf(c, fc, &mut f, &fc.in_cdf());
                         } else {
-                            println!("{:?}", fc.task_thread.error.load(Ordering::SeqCst));
+                            println!(
+                                "THREAD ERROR FROM RAV1D_DECODE FRAME INIT CDF 1053 MARK z {:?}",
+                                fc.task_thread.error.load(Ordering::SeqCst)
+                            );
                             panic!("FOUND AN ERROR");
                         }
                         let frame_hdr = &***f.frame_hdr.as_ref().unwrap();

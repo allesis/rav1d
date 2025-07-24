@@ -5,9 +5,9 @@ use crate::ctx::CaseSet;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
 use crate::include::common::bitdepth::AsPrimitive;
+use crate::include::common::bitdepth::BPC;
 use crate::include::common::bitdepth::BitDepth;
 use crate::include::common::bitdepth::ToPrimitive;
-use crate::include::common::bitdepth::BPC;
 use crate::include::common::dump::ac_dump;
 use crate::include::common::dump::coef_dump;
 use crate::include::common::dump::hex_dump;
@@ -42,41 +42,42 @@ use crate::levels::Av1BlockInter;
 use crate::levels::Av1BlockIntra;
 use crate::levels::Av1BlockIntraInter;
 use crate::levels::BlockSize;
+use crate::levels::CFL_PRED;
 use crate::levels::CompInterType;
+use crate::levels::DC_PRED;
+use crate::levels::DCT_DCT;
+use crate::levels::FILTER_PRED;
 use crate::levels::Filter2d;
+use crate::levels::GLOBALMV;
+use crate::levels::GLOBALMV_GLOBALMV;
+use crate::levels::IDTX;
 use crate::levels::InterIntraPredMode;
 use crate::levels::InterIntraType;
 use crate::levels::IntraPredMode;
 use crate::levels::MotionMode;
 use crate::levels::Mv;
+use crate::levels::SMOOTH_PRED;
 use crate::levels::TxClass;
 use crate::levels::TxfmSize;
 use crate::levels::TxfmType;
-use crate::levels::CFL_PRED;
-use crate::levels::DCT_DCT;
-use crate::levels::DC_PRED;
-use crate::levels::FILTER_PRED;
-use crate::levels::GLOBALMV;
-use crate::levels::GLOBALMV_GLOBALMV;
-use crate::levels::IDTX;
-use crate::levels::SMOOTH_PRED;
 use crate::levels::WHT_WHT;
 use crate::lf_apply::rav1d_copy_lpf;
 use crate::lf_apply::rav1d_loopfilter_sbrow_cols;
 use crate::lf_apply::rav1d_loopfilter_sbrow_rows;
 use crate::lr_apply::rav1d_lr_sbrow;
+use crate::msac::MsacContext;
 use crate::msac::rav1d_msac_decode_bool_adapt;
 use crate::msac::rav1d_msac_decode_bool_equi;
 use crate::msac::rav1d_msac_decode_bools;
 use crate::msac::rav1d_msac_decode_hi_tok;
-use crate::msac::rav1d_msac_decode_symbol_adapt16;
 use crate::msac::rav1d_msac_decode_symbol_adapt4;
 use crate::msac::rav1d_msac_decode_symbol_adapt8;
-use crate::msac::MsacContext;
+use crate::msac::rav1d_msac_decode_symbol_adapt16;
 use crate::picture::Rav1dThreadPicture;
 use crate::pixels::Pixels as _;
 use crate::scan::dav1d_scans;
 use crate::strided::Strided as _;
+use crate::tables::TxfmInfo;
 use crate::tables::dav1d_filter_2d;
 use crate::tables::dav1d_filter_mode_to_y_mode;
 use crate::tables::dav1d_lo_ctx_offsets;
@@ -85,7 +86,6 @@ use crate::tables::dav1d_tx_type_class;
 use crate::tables::dav1d_tx_types_per_set;
 use crate::tables::dav1d_txfm_dimensions;
 use crate::tables::dav1d_txtp_from_uvmode;
-use crate::tables::TxfmInfo;
 use crate::wedge::dav1d_ii_masks;
 use crate::wedge::dav1d_wedge_masks;
 use crate::with_offset::WithOffset;
@@ -538,6 +538,24 @@ fn decode_coefs<BD: BitDepth>(
     txtp: &mut TxfmType,
     res_ctx: &mut u8,
 ) -> c_int {
+    println!("STARTED DECODING COEFS");
+
+    /*
+    let hash;
+    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
+    hash =
+        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
+    println!("HASH IS {:?}", hash);
+    if hash != u64::MAX {
+        println!("HASH IS {:?}", hash);
+        loop {
+            let byte = rav1d_msac_decode_bools(&mut ts_c.msac, 8) as u8;
+            // print the leading zero
+            println!("{:02X?}", byte);
+        }
+    }
+    */
+
     struct Cf<'a, BD: BitDepth>(&'a mut [BD::Coef]);
 
     impl<'a, BD: BitDepth> Cf<'a, BD> {
@@ -612,6 +630,12 @@ fn decode_coefs<BD: BitDepth>(
         );
     }
 
+    if all_skip {
+        *res_ctx = 0x40;
+        *txtp = if lossless { WHT_WHT } else { DCT_DCT };
+        return -1;
+    }
+
     let sw = cmp::min(1 << t_dim.lw, 8) as usize;
     let sh = cmp::min(1 << t_dim.lh, 8) as usize;
     let cf_len = sw * 4 * sh * 4;
@@ -623,7 +647,6 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let cf = Cf::<BD>(cf);
-
     let hash;
     let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
     hash =
@@ -637,22 +660,18 @@ fn decode_coefs<BD: BitDepth>(
             Some(res) => {
                 // Hash found in table
                 let vec = &res.vec;
+
                 *res_ctx = res.res_ctx;
                 println!("CF {:?}\nVEC {:?}", cf, vec);
                 cf.insert_vec(vec);
-                println!("CF {:?}\nVEC {:?}", cf, vec);
                 *txtp = res.txtp;
+                println!("CF {:?}\nVEC {:?}", cf, vec);
+                println!("EOB {:?}", res.eob);
                 return res.eob as i32;
             }
             None => {}
         }
     }
-    if all_skip {
-        *res_ctx = 0x40;
-        *txtp = if lossless { WHT_WHT } else { DCT_DCT };
-        return -1;
-    }
-
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
     *txtp = match &b.ii {
@@ -707,11 +726,7 @@ fn decode_coefs<BD: BitDepth>(
                     &mut ts_c.cdf.m.txtp_inter3[t_dim.min as usize],
                 );
                 idx = bool_idx as u8;
-                if bool_idx {
-                    DCT_DCT
-                } else {
-                    IDTX
-                }
+                if bool_idx { DCT_DCT } else { IDTX }
             } else if t_dim.min == TxfmSize::S16x16 as _ {
                 idx = rav1d_msac_decode_symbol_adapt16(
                     &mut ts_c.msac,
@@ -1584,6 +1599,7 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
     } as usize];
 
     for init_y in (0..h4).step_by(16) {
+        println!("INIT Y LOOP");
         let sub_h4 = cmp::min(h4, 16 + init_y);
         for init_x in (0..w4).step_by(16) {
             let sub_w4 = cmp::min(w4, init_x + 16);
@@ -1685,6 +1701,7 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
             let sub_cw4 = cmp::min(cw4, init_x + 16 >> ss_hor);
             let mut pl = 0;
             while pl < 2 {
+                println!("PL LOOP");
                 y = init_y >> ss_ver;
                 t.b.y += init_y as c_int;
                 while y < sub_ch4 {
@@ -2764,15 +2781,15 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
-                                            "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={} [x={},cbx4={}]",
-                                            pl,
-                                            b.uvtx,
-                                            txtp,
-                                            eob,
-                                            ts_c.as_deref().unwrap().msac.rng,
-                                            x,
-                                            cbx4,
-                                        );
+                                        "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={} [x={},cbx4={}]",
+                                        pl,
+                                        b.uvtx,
+                                        txtp,
+                                        eob,
+                                        ts_c.as_deref().unwrap().msac.rng,
+                                        x,
+                                        cbx4,
+                                    );
                                 }
                                 CaseSet::<16, true>::many(
                                     [l_ccoef, a_ccoef],
