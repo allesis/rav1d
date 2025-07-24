@@ -192,11 +192,7 @@ fn read_mv_component_diff(
 
     let diff = ((up << 3 | (fp as u16) << 1 | hp) + 1) as c_int;
 
-    if sign {
-        -diff
-    } else {
-        diff
-    }
+    if sign { -diff } else { diff }
 }
 
 fn read_mv_residual(ts_c: &mut Rav1dTileStateContext, ref_mv: &mut Mv, mv_prec: i32) {
@@ -1361,10 +1357,12 @@ fn decode_b(
     } else {
         b.skip_mode = 0;
     }
+    println!("B_SKIP_MODE SET TO {:?}", b.skip_mode);
 
     // skip
     if b.skip_mode != 0 || seg.map(|seg| seg.skip != 0).unwrap_or(false) {
         b.skip = 1;
+        println!("B_SKIP IS 1");
     } else {
         let sctx = *ta.skip.index(bx4 as usize) + *t.l.skip.index(by4 as usize);
         b.skip =
@@ -1372,6 +1370,7 @@ fn decode_b(
         if debug_block_info!(f, t.b) {
             println!("Post-skip[{}]: r={}", b.skip, ts_c.msac.rng);
         }
+        println!("B_SKIP SET TO {:?}", b.skip);
     }
 
     // segment_id
@@ -4235,6 +4234,12 @@ pub(crate) fn rav1d_decode_tile_sbrow(
             EdgeIndex::root(),
         )?;
         println!("DECODE SB EXIT 1");
+        if ts.context.try_lock().unwrap().msac.cnt <= -15 {
+            println!("OVERREAD MSAC CNT");
+            return Err(());
+        } else {
+            println!("NO OVEREAD");
+        }
         if t.b.x & 16 != 0 || f.seq_hdr().sb128 != 0 {
             t.a += 1;
             t.lf_mask = t.lf_mask.map(|i| i + 1);
@@ -4283,6 +4288,7 @@ pub(crate) fn rav1d_decode_tile_sbrow(
 
     // error out on symbol decoder overread
     if ts.context.try_lock().unwrap().msac.cnt <= -15 {
+        println!("OVERREAD MSAC CNT");
         return Err(());
     }
 
@@ -4295,6 +4301,7 @@ pub(crate) fn rav1d_decode_tile_sbrow(
         //return check_trailing_bits_after_symbol_coder(msac);
         return check_trailing_bits_after_symbol_coder(&ts.context.try_lock().unwrap().msac);
     }
+    println!("EXIT DECODE TILE SBROW");
     Ok(())
 }
 

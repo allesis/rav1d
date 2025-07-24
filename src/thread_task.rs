@@ -801,6 +801,7 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             continue 'outer;
         }
 
+        println!("START OF FOUND");
         let (fc, t_idx, prev_t) = 'found: {
             if c.fc.len() > 1 {
                 // run init tasks second
@@ -850,6 +851,10 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             while (ttd.cur.get() as usize) < c.fc.len() {
                 let first = ttd.first.load(Ordering::SeqCst);
                 let fc = &c.fc[(first + ttd.cur.get()) as usize % c.fc.len()];
+                println!(
+                    "LOOP HAS ERROR VALUE OF {:?}",
+                    fc.task_thread.error.load(Ordering::SeqCst)
+                );
                 let tasks = &fc.task_thread.tasks;
                 tasks.merge_pending_frame(c);
                 let mut prev_t = tasks.cur_prev.get();
@@ -1030,7 +1035,10 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         if fc.task_thread.error.load(Ordering::SeqCst) == 0 {
                             res_0 = rav1d_decode_frame_init_cdf(c, fc, &mut f, &fc.in_cdf());
                         } else {
-                            println!("{:?}", fc.task_thread.error.load(Ordering::SeqCst));
+                            println!(
+                                "THREAD ERROR FROM RAV1D_DECODE FRAME INIT CDF 1053 MARK z {:?}",
+                                fc.task_thread.error.load(Ordering::SeqCst)
+                            );
                             panic!("FOUND AN ERROR");
                         }
                         let frame_hdr = &***f.frame_hdr.as_ref().unwrap();

@@ -2132,6 +2132,7 @@ fn parse_obus(
         state.n_tiles = 0;
     }
 
+    println!("PARSE HEADER");
     // obu header
     let obu_forbidden_bit = gb.get_bit();
     if c.strict_std_compliance && obu_forbidden_bit {
