@@ -4731,7 +4731,6 @@ pub(crate) fn rav1d_decode_frame_init_cdf(
     Ok(())
 }
 
-use std::collections::HashMap;
 fn rav1d_decode_frame_main(c: &Rav1dContext, f: &mut Rav1dFrameData) -> Rav1dResult {
     assert!(c.tc.len() == 1);
 

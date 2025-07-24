@@ -23,3 +23,5 @@ target/
 .direnv
 .cache/clangd/index
 rav1d.norg
+*.txt
+*.y4m
