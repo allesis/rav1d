@@ -2404,7 +2404,6 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 &mut txtp,
                                 &mut cf_ctx,
                             );
-                            println!("RECON 2390");
                             cf = t.cf.select_mut::<BD>();
                             if debug_block_info!(f, t.b) {
                                 println!(
@@ -2777,7 +2776,6 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                     &mut txtp,
                                     &mut cf_ctx,
                                 );
-                                println!("RECON 2763");
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(

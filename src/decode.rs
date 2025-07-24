@@ -4792,7 +4792,6 @@ pub(crate) fn rav1d_decode_frame_init_cdf(
     Ok(())
 }
 
-use std::collections::HashMap;
 fn rav1d_decode_frame_main(c: &Rav1dContext, f: &mut Rav1dFrameData) -> Rav1dResult {
     assert!(c.tc.len() == 1);
 
@@ -4838,6 +4837,7 @@ fn rav1d_decode_frame_main(c: &Rav1dContext, f: &mut Rav1dFrameData) -> Rav1dRes
             }
             for col in 0..cols {
                 t.ts = tile_row * cols + col;
+                // Overread of msac.cnt occurs here
                 rav1d_decode_tile_sbrow(c, &mut t, f).map_err(|()| EINVAL)?;
             }
             if f.frame_hdr().frame_type.is_inter_or_switch() {
