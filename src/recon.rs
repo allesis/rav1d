@@ -657,13 +657,13 @@ fn decode_coefs<BD: BitDepth>(
             .mut_slice_as((offset as usize.., ..cf_len)),
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
-    let cf = Cf::<BD>(cf);
+    let mut cf = Cf::<BD>(cf);
+    /*
     let hash;
     let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
     hash =
         ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
     println!("HASH IS {:?}", hash);
-    let mut cf = cf;
     let hashmap = hashmap.expect("FAILED TO FIND HASHMAP");
     {
         let hashmap = hashmap.lock();
@@ -683,6 +683,7 @@ fn decode_coefs<BD: BitDepth>(
             None => {}
         }
     }
+    */
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
     *txtp = match &b.ii {
@@ -1392,16 +1393,19 @@ fn decode_coefs<BD: BitDepth>(
     }
     // Hash not found in table
     let res_eob = eob as i32;
-    let hash_object = HashObject {
-        vec: cf.into_vec_i32(),
-        eob: res_eob,
-        res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
-        txtp: *txtp,
-    };
-    println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
-    *res_ctx = hash_object.res_ctx;
-    hashmap.lock().insert(hash, hash_object);
+    /*
+        let hash_object = HashObject {
+            vec: cf.into_vec_i32(),
+            eob: res_eob,
+            res_ctx: (cmp::min(cul_level, 63) | dc_sign_level) as u8,
+            txtp: *txtp,
+        };
+        println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
+        *res_ctx = hash_object.res_ctx;
+        hashmap.lock().insert(hash, hash_object);
 
+    */
+    *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     // context
     res_eob
 }
