@@ -104,12 +104,12 @@ macro_rules! debug_block_info {
         use crate::internal::Bxy;
 
         let tb: Bxy = $tb;
-        false && $f.frame_hdr.as_ref().unwrap().frame_offset == 2 && tb.debug_block_info()
+        true && $f.frame_hdr.as_ref().unwrap().frame_offset == 2 && tb.debug_block_info()
     }};
 }
 pub(crate) use debug_block_info;
 
-const DEBUG_B_PIXELS: bool = false;
+const DEBUG_B_PIXELS: bool = true;
 
 pub(crate) type ReconBIntraFn = fn(
     &Rav1dFrameData,
@@ -533,6 +533,18 @@ fn get_lo_ctx(
     LoCdfIndex::new(lo_ctx).unwrap() // Elided
 }
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+fn hash(coeffs: Vec<u8>, eob: u16, x: usize, y: usize) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    coeffs.hash(&mut hasher);
+    eob.hash(&mut hasher);
+    x.hash(&mut hasher);
+    y.hash(&mut hasher);
+    let hash = hasher.finish();
+    hash
+}
+
 fn decode_coefs<BD: BitDepth>(
     f: &Rav1dFrameData,
     ts: usize,
@@ -550,8 +562,6 @@ fn decode_coefs<BD: BitDepth>(
     txtp: &mut TxfmType,
     res_ctx: &mut u8,
 ) -> c_int {
-    println!("STARTED DECODING COEFS");
-
     /*
     let hash;
     let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
@@ -1391,6 +1401,7 @@ fn decode_coefs<BD: BitDepth>(
         }
         None => {}
     }
+
     // Hash not found in table
     let res_eob = eob as i32;
     /*
@@ -1406,6 +1417,8 @@ fn decode_coefs<BD: BitDepth>(
 
     */
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
+
+    //println!("CF {:?}", cf);
     // context
     res_eob
 }
@@ -1548,7 +1561,6 @@ fn read_coef_tree<BD: BitDepth>(
                 &mut txtp,
                 &mut cf_ctx,
             );
-            println!("RECON 1463");
             if debug_block_info!(f, t.b) {
                 println!(
                     "Post-y-cf-blk[tx={:?},txtp={},eob={}]: r={}",
@@ -1594,15 +1606,16 @@ fn read_coef_tree<BD: BitDepth>(
                     }
                     CfSelect::Task => t.cf.select_mut::<BD>(),
                 };
-                if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
-                    coef_dump(
-                        cf,
-                        cmp::min(t_dim.h as usize, 8) * 4,
-                        cmp::min(t_dim.w as usize, 8) * 4,
-                        3,
-                        "dq",
-                    );
-                }
+                t.b.debug_block_info();
+                //if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
+                coef_dump(
+                    cf,
+                    cmp::min(t_dim.h as usize, 8) * 4,
+                    cmp::min(t_dim.w as usize, 8) * 4,
+                    3,
+                    "dq",
+                );
+                // }
                 f.dsp.itx.itxfm_add[ytx as usize][txtp as usize].call::<BD>(y_dst, cf, eob, bd);
                 if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
                     hex_dump_pic::<BD>(y_dst, t_dim.w as usize * 4, t_dim.h as usize * 4, "recon");
@@ -1672,7 +1685,6 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
     } as usize];
 
     for init_y in (0..h4).step_by(16) {
-        println!("INIT Y LOOP");
         let sub_h4 = cmp::min(h4, 16 + init_y);
         for init_x in (0..w4).step_by(16) {
             let sub_w4 = cmp::min(w4, init_x + 16);
@@ -1733,7 +1745,6 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
                                 &mut txtp,
                                 &mut cf_ctx,
                             );
-                            println!("RECON 1647");
                             if debug_block_info!(f, t.b) {
                                 println!(
                                     "Post-y-cf-blk[tx={:?},txtp={},eob={}]: r={}",
@@ -1774,7 +1785,6 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
             let sub_cw4 = cmp::min(cw4, init_x + 16 >> ss_hor);
             let mut pl = 0;
             while pl < 2 {
-                println!("PL LOOP");
                 y = init_y >> ss_ver;
                 t.b.y += init_y as c_int;
                 while y < sub_ch4 {
@@ -1816,7 +1826,6 @@ pub(crate) fn rav1d_read_coef_blocks<BD: BitDepth>(
                             &mut txtp,
                             &mut cf_ctx,
                         );
-                        println!("RECON 1729");
                         if debug_block_info!(f, t.b) {
                             println!(
                                 "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={}",
@@ -2500,15 +2509,15 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                             );
                         }
                         if eob >= 0 {
-                            if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
-                                coef_dump(
-                                    cf,
-                                    cmp::min(t_dim.h as usize, 8) * 4,
-                                    cmp::min(t_dim.w as usize, 8) * 4,
-                                    3,
-                                    "dq",
-                                );
-                            }
+                            //if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
+                            coef_dump(
+                                cf,
+                                cmp::min(t_dim.h as usize, 8) * 4,
+                                cmp::min(t_dim.w as usize, 8) * 4,
+                                3,
+                                "dq",
+                            );
+                            //}
                             f.dsp.itx.itxfm_add[intra.tx as usize][txtp as usize]
                                 .call::<BD>(y_dst, cf, eob, bd);
                             if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
@@ -2877,15 +2886,15 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 );
                             }
                             if eob >= 0 {
-                                if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
-                                    coef_dump(
-                                        cf,
-                                        uv_t_dim.h as usize * 4,
-                                        uv_t_dim.w as usize * 4,
-                                        3,
-                                        "dq",
-                                    );
-                                }
+                                //  if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
+                                coef_dump(
+                                    cf,
+                                    uv_t_dim.h as usize * 4,
+                                    uv_t_dim.w as usize * 4,
+                                    3,
+                                    "dq",
+                                );
+                                // }
                                 f.dsp.itx.itxfm_add[b.uvtx as usize][txtp as usize]
                                     .call::<BD>(uv_dst, cf, eob, bd);
                                 if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
@@ -3732,7 +3741,6 @@ pub(crate) fn rav1d_recon_b_inter<BD: BitDepth>(
                                     &mut txtp,
                                     &mut cf_ctx,
                                 );
-                                println!("RECON 3647");
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
@@ -3759,15 +3767,9 @@ pub(crate) fn rav1d_recon_b_inter<BD: BitDepth>(
                                 );
                             }
                             if eob >= 0 {
-                                if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
-                                    coef_dump(
-                                        cf,
-                                        uvtx.h as usize * 4,
-                                        uvtx.w as usize * 4,
-                                        3,
-                                        "dq",
-                                    );
-                                }
+                                //if debug_block_info!(f, t.b) && DEBUG_B_PIXELS {
+                                coef_dump(cf, uvtx.h as usize * 4, uvtx.w as usize * 4, 3, "dq");
+                                //}
                                 f.dsp.itx.itxfm_add[b.uvtx as usize][txtp as usize].call::<BD>(
                                     uv_dst + 4 * x as usize,
                                     cf,

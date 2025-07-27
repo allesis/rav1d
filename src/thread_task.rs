@@ -536,9 +536,7 @@ fn check_tile(
         return 1;
     }
     let mut error = (p1 == TILE_ERROR) as c_int;
-    println!("GOT {:?} while checking tile", error);
     error |= task_thread.error.fetch_or(error, Ordering::SeqCst);
-    println!("GOT {:?} while checking tile", error);
     if error == 0 && frame_mt != 0 && !tp {
         let p2 = ts.progress[1].load(Ordering::SeqCst);
         if p2 <= t.sby {
@@ -644,7 +642,6 @@ fn abort_frame(c: &Rav1dContext, fc: &Rav1dFrameContext, error: Rav1dResult) {
         progress[0].store(FRAME_ERROR, Ordering::SeqCst);
         progress[1].store(FRAME_ERROR, Ordering::SeqCst);
     }
-    println!("ABORTING FRAME");
     let _ = rav1d_decode_frame_exit(c, fc, error);
     fc.task_thread.cond.notify_one();
 }
@@ -801,7 +798,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             continue 'outer;
         }
 
-        println!("START OF FOUND");
         let (fc, t_idx, prev_t) = 'found: {
             if c.fc.len() > 1 {
                 // run init tasks second
@@ -838,7 +834,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                             1 as c_int as c_uint
                         }) as c_int;
                         if p1 != 0 {
-                            println!("P1 IS {:?}", p1);
                             fc.task_thread
                                 .error
                                 .fetch_or((p1 == TILE_ERROR) as c_int, Ordering::SeqCst);
@@ -851,10 +846,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             while (ttd.cur.get() as usize) < c.fc.len() {
                 let first = ttd.first.load(Ordering::SeqCst);
                 let fc = &c.fc[(first + ttd.cur.get()) as usize % c.fc.len()];
-                println!(
-                    "LOOP HAS ERROR VALUE OF {:?}",
-                    fc.task_thread.error.load(Ordering::SeqCst)
-                );
                 let tasks = &fc.task_thread.tasks;
                 tasks.merge_pending_frame(c);
                 let mut prev_t = tasks.cur_prev.get();
@@ -882,7 +873,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
 
                             // if not bottom sbrow of tile, this task will be re-added
                             // after it's finished
-                            println!("CHECKING TILE IN 891");
                             if check_tile(&f, &fc.task_thread, &t, (c.fc.len() > 1) as c_int) == 0 {
                                 break 'found (fc, t_idx, prev_t);
                             }
@@ -968,13 +958,10 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
             park(c, &mut tc, ttd, task_thread_lock.as_mut().unwrap());
             continue 'outer;
         };
-        println!("BROKE OUT OF FOUND");
-        println!("{:?}", fc.task_thread.error.load(Ordering::SeqCst));
         // found:
         // remove t from list
         let Some(mut t) = fc.task_thread.tasks.remove(t_idx, prev_t) else {
             // Another thread already consumed the task
-            eprintln!("Task {t_idx:?} already consumed");
             continue 'outer;
         };
         if t.type_0 > TaskType::InitCdf
@@ -991,9 +978,7 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
 
         'found_unlocked: loop {
             let flush = c.flush.load(Ordering::SeqCst) as i32;
-            println!("FLUSH {:?}", flush);
             let mut error_0 = fc.task_thread.error.fetch_or(flush, Ordering::SeqCst) | flush;
-            println!("ERROR_0 {:?}", error_0);
 
             // run it
             let mut sby = t.sby;
@@ -1034,12 +1019,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         let mut f = fc.data.try_write().unwrap();
                         if fc.task_thread.error.load(Ordering::SeqCst) == 0 {
                             res_0 = rav1d_decode_frame_init_cdf(c, fc, &mut f, &fc.in_cdf());
-                        } else {
-                            println!(
-                                "THREAD ERROR FROM RAV1D_DECODE FRAME INIT CDF 1053 MARK z {:?}",
-                                fc.task_thread.error.load(Ordering::SeqCst)
-                            );
-                            panic!("FOUND AN ERROR");
                         }
                         let frame_hdr = &***f.frame_hdr.as_ref().unwrap();
                         if frame_hdr.refresh_context != 0 && !fc.task_thread.update_set.get() {
@@ -1112,7 +1091,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         } else {
                             assert!(task_thread_lock.is_none(), "thread lock should not be held");
                             task_thread_lock = Some(ttd.lock.lock());
-                            println!("1102");
                             abort_frame(c, fc, res_0);
                             reset_task_cur(c, ttd, t.frame_idx);
                             fc.task_thread.init_done.store(1, Ordering::SeqCst);
@@ -1137,7 +1115,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                                 Ok(()) => 0,
                                 Err(()) => 1,
                             };
-                            println!("RESULT OF DECODE SBROW IS {:?}", error_0);
                         }
                         let progress = if error_0 != 0 { TILE_ERROR } else { 1 + sby };
 
@@ -1147,7 +1124,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         if (sby + 1) << f.sb_shift < ts.tiling.row_end {
                             t.sby += 1;
                             t.deps_skip = 0.into();
-                            println!("CHECKING TILe IN 1147");
                             if check_tile(&f, &fc.task_thread, &t, uses_2pass) == 0 {
                                 ts.progress[p_1 as usize].store(progress, Ordering::SeqCst);
                                 reset_task_cur_async(ttd, t.frame_idx, c.fc.len() as u32);
@@ -1191,12 +1167,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                                             as c_uint,
                                         Ordering::SeqCst,
                                     );
-                                    if progress.load(Ordering::SeqCst) != 1 {
-                                        println!(
-                                            "PROGRESS IS ERROR {:?}",
-                                            progress.load(Ordering::SeqCst)
-                                        );
-                                    }
                                 }
                             }
                             if fc.task_thread.task_counter.fetch_sub(1, Ordering::SeqCst) - 1 == 0
@@ -1380,7 +1350,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                     && fc.task_thread.done[0].load(Ordering::SeqCst) != 0
                     && fc.task_thread.done[1].load(Ordering::SeqCst) != 0
                 {
-                    println!("ERROR 0 1374");
                     error_0 = fc.task_thread.error.load(Ordering::SeqCst);
                     let _ = rav1d_decode_frame_exit(
                         c,
