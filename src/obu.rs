@@ -125,21 +125,17 @@ impl Debug {
 }
 
 fn check_trailing_bits(gb: &mut GetBits, strict_std_compliance: bool) -> Rav1dResult {
-    println!("CHECKING TRAILING BITS");
     let trailing_one_bit = gb.get_bit();
 
     if gb.has_error() != 0 {
-        println!("HAS ERROR");
         return Err(EINVAL);
     }
 
     if !strict_std_compliance {
-        println!("NOT STD CMPL");
         return Ok(());
     }
 
     if !trailing_one_bit || gb.pending_bits() != 0 {
-        println!("FAILED TRAILING CHECK");
         return Err(EINVAL);
     }
 
@@ -149,7 +145,6 @@ fn check_trailing_bits(gb: &mut GetBits, strict_std_compliance: bool) -> Rav1dRe
         return Err(EINVAL);
     }
 
-    println!("TRAILING SUCCESSFUL");
     Ok(())
 }
 
@@ -158,7 +153,7 @@ fn parse_seq_hdr(
     gb: &mut GetBits,
     strict_std_compliance: bool,
 ) -> Rav1dResult<Rav1dSequenceHeader> {
-    let debug = Debug::new(false, "SEQHDR", gb);
+    let debug = Debug::new(true, "SEQHDR", gb);
 
     let profile = Rav1dProfile::from_repr(gb.get_bits(3) as usize).ok_or(EINVAL)?;
     debug.post(gb, "post-profile");
@@ -1782,7 +1777,7 @@ fn parse_frame_hdr(
     spatial_id: u8,
     gb: &mut GetBits,
 ) -> Rav1dResult<Rav1dFrameHeader> {
-    let debug = Debug::new(false, "HDR", gb);
+    let debug = Debug::new(true, "HDR", gb);
 
     debug.post(gb, "show_existing_frame");
     let show_existing_frame = (seqhdr.reduced_still_picture_header == 0 && gb.get_bit()) as u8;
@@ -2171,7 +2166,6 @@ fn parse_obus(
         state.n_tiles = 0;
     }
 
-    println!("PARSE HEADER");
     // obu header
     let obu_forbidden_bit = gb.get_bit();
     if c.strict_std_compliance && obu_forbidden_bit {
@@ -2197,7 +2191,6 @@ fn parse_obus(
         gb.set_remaining_len(len).ok_or(EINVAL)?;
     }
     if gb.has_error() != 0 {
-        println!("PARSE HEADER HAS ERROR");
         return Err(EINVAL);
     }
 
@@ -2229,7 +2222,6 @@ fn parse_obus(
         // Align to the next byte boundary and check for overrun.
         gb.bytealign();
         if gb.has_error() != 0 {
-            println!("ERrOR 2228");
             return Err(EINVAL);
         }
 
@@ -2238,7 +2230,6 @@ fn parse_obus(
         data.slice_in_place(..gb.remaining_len());
         // Ensure tile groups are in order and sane; see 6.10.1.
         if hdr.start > hdr.end || hdr.start != state.n_tiles {
-            println!("2237 ERrOR");
             state.tiles.clear();
             state.n_tiles = 0;
             return Err(EINVAL);
@@ -2356,7 +2347,6 @@ fn parse_obus(
             if r#type == Some(Rav1dObuType::Frame) {
                 // OBU_FRAMEs shouldn't be signaled with `show_existing_frame`.
                 if frame_hdr.show_existing_frame != 0 {
-                    println!("ERROR SHOW EXISTING FRAME");
                     return Err(EINVAL);
                 }
             }
@@ -2375,12 +2365,11 @@ fn parse_obus(
             parse_tile_grp(state, r#in, props, gb)?;
         }
         Some(Rav1dObuType::Metadata) => {
-            let debug = Debug::new(false, "OBU", &gb);
+            let debug = Debug::new(true, "OBU", &gb);
 
             // obu metadata type field
             let meta_type = gb.get_uleb128();
             if gb.has_error() != 0 {
-                println!("ERror META DATA");
                 return Err(EINVAL);
             }
 
@@ -2562,7 +2551,6 @@ fn parse_obus(
                 let error = &mut *fc.task_thread.retval.try_lock().unwrap();
                 if error.is_some() {
                     state.cached_error = mem::take(error);
-                    println!("2561 {:?}", state.cached_error);
                     state.cached_error_props = out_delayed.p.m.clone();
                     let _ = mem::take(out_delayed);
                 } else if out_delayed.p.data.is_some() {
@@ -2644,7 +2632,6 @@ fn parse_obus(
         }
     }
 
-    println!("PARSED OBU");
     Ok(())
 }
 

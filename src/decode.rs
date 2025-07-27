@@ -1418,12 +1418,10 @@ fn decode_b(
     } else {
         b.skip_mode = 0;
     }
-    println!("B_SKIP_MODE SET TO {:?}", b.skip_mode);
 
     // skip
     if b.skip_mode != 0 || seg.map(|seg| seg.skip != 0).unwrap_or(false) {
         b.skip = 1;
-        println!("B_SKIP IS 1");
     } else {
         let sctx = *ta.skip.index(bx4 as usize) + *t.l.skip.index(by4 as usize);
         b.skip =
@@ -1431,7 +1429,6 @@ fn decode_b(
         if debug_block_info!(f, t.b) {
             println!("Post-skip[{}]: r={}", b.skip, ts_c.msac.rng);
         }
-        println!("B_SKIP SET TO {:?}", b.skip);
     }
 
     // segment_id
@@ -1922,15 +1919,12 @@ fn decode_b(
 
         // reconstruction
         if t.frame_thread.pass == 1 {
-            println!("READ BLOCKS 1 ENTER");
             (bd_fn.read_coef_blocks)(f, t, ts_c, bs, b);
-            println!("READ BLOCKS 1 EXIT");
         } else {
             (bd_fn.recon_b_intra)(f, t, Some(ts_c), bs, intra_edge_flags, b, &intra);
         }
 
         if f.frame_hdr().loopfilter.level_y != [0, 0] {
-            println!("HEADER");
             let lflvl = match ts.lflvl.get() {
                 TileStateRef::Frame => &f.lf.lvl,
                 TileStateRef::Local => &*ts.lflvlmem.try_read().unwrap(),
@@ -2170,9 +2164,7 @@ fn decode_b(
 
         // reconstruction
         if t.frame_thread.pass == 1 {
-            println!("READ COEF BLOCK 3 ENTER");
             (bd_fn.read_coef_blocks)(f, t, ts_c, bs, b);
-            println!("READ COEF BLOCK 3 EXIT");
         } else {
             (bd_fn.recon_b_inter)(f, t, Some(ts_c), bs, b, &inter)?;
         }
@@ -3059,9 +3051,7 @@ fn decode_b(
 
         // reconstruction
         if t.frame_thread.pass == 1 {
-            println!("READ COEF BLOCK 2 ENTER");
             (bd_fn.read_coef_blocks)(f, t, ts_c, bs, b);
-            println!("READ COEF BLOCK 2 EXIT");
         } else {
             (bd_fn.recon_b_inter)(f, t, Some(ts_c), bs, b, &inter)?;
         }
@@ -3425,7 +3415,6 @@ fn decode_b(
         _ => {}
     }
 
-    println!("EXIT SUCCESSFUL DECODE BLOCK");
     Ok(())
 }
 
@@ -3797,7 +3786,6 @@ fn decode_sb(
         );
     }
 
-    println!("EXIT SUCCESSFUL DECODE_SB");
     Ok(())
 }
 
@@ -4087,31 +4075,19 @@ fn check_trailing_bits_after_symbol_coder(msac: &MsacContext) -> Result<(), ()> 
     let n_bits = -(msac.cnt + 14);
     assert!(n_bits <= 0); // this assumes we errored out when cnt <= -15 in caller
     let n_bytes = (n_bits + 7) >> 3;
-    println!("n_bits: {:?}", n_bits);
-    println!("n_bytes: {:?}", n_bytes);
     let trailing_bytes_offset = msac.buf_index().wrapping_add_signed(n_bytes as isize - 1);
     let trailing_bytes = &msac.data()[trailing_bytes_offset..];
     let pattern = 128 >> ((n_bits - 1) & 7);
     // use x + (x - 1) instead of 2x - 1 to avoid overflow
-    println!(
-        "PATTERN {:?}\nTRAILING {:?}\nRES {:?}",
-        pattern,
-        trailing_bytes[0],
-        (trailing_bytes[0] & (pattern + (pattern - 1)))
-    );
     if (trailing_bytes[0] & (pattern + (pattern - 1))) != pattern {
-        println!("NOT A SINGLE 1");
         return Err(());
     }
 
-    println!("TRAILING BYTES {:?}", trailing_bytes);
     // check remainder zero bytes
     if trailing_bytes[1..].iter().any(|&x| x != 0) {
-        println!("FOUND NONZERO BYTES");
         return Err(());
     }
 
-    println!("OK");
     return Ok(());
 }
 
@@ -4284,7 +4260,6 @@ pub(crate) fn rav1d_decode_tile_sbrow(
                 read_restoration_info(ts, &mut lr, p, frame_type, debug_block_info!(f, t.b));
             }
         }
-        println!("DECODE SB ENTER 1");
         decode_sb(
             c,
             t,
@@ -4293,12 +4268,9 @@ pub(crate) fn rav1d_decode_tile_sbrow(
             root_bl,
             EdgeIndex::root(),
         )?;
-        println!("DECODE SB EXIT 1");
         if ts.context.try_lock().unwrap().msac.cnt <= -15 {
-            println!("OVERREAD MSAC CNT");
             return Err(());
         } else {
-            println!("NO OVEREAD");
         }
         if t.b.x & 16 != 0 || f.seq_hdr().sb128 != 0 {
             t.a += 1;
@@ -4348,7 +4320,6 @@ pub(crate) fn rav1d_decode_tile_sbrow(
 
     // error out on symbol decoder overread
     if ts.context.try_lock().unwrap().msac.cnt <= -15 {
-        println!("OVERREAD MSAC CNT");
         return Err(());
     }
 
@@ -4356,12 +4327,10 @@ pub(crate) fn rav1d_decode_tile_sbrow(
         && (t.b.y >> f.sb_shift) + 1
             >= f.frame_hdr().tiling.row_start_sb[tile_row as usize + 1].into()
     {
-        println!("TRAILING BITS CHECK");
         //let mut msac = &mut ts.context.try_lock().unwrap().msac;
         //return check_trailing_bits_after_symbol_coder(msac);
         return check_trailing_bits_after_symbol_coder(&ts.context.try_lock().unwrap().msac);
     }
-    println!("EXIT DECODE TILE SBROW");
     Ok(())
 }
 
@@ -4878,7 +4847,6 @@ pub(crate) fn rav1d_decode_frame_exit(
                 && rf.progress.as_ref().unwrap()[1].load(Ordering::SeqCst) == FRAME_ERROR
         }) {
             retval = Err(EINVAL);
-            println!("STORED ERROR 4848");
             task_thread.error.store(1, Ordering::SeqCst);
             f.sr_cur.progress.as_mut().unwrap()[1].store(FRAME_ERROR, Ordering::SeqCst);
         }
@@ -4896,12 +4864,6 @@ pub(crate) fn rav1d_decode_frame_exit(
                     if retval.is_ok() { 1 } else { TILE_ERROR as u32 },
                     Ordering::SeqCst,
                 );
-                if progress.load(Ordering::SeqCst) != 1 {
-                    println!(
-                        "PROGRESS IS ERROR in decode {:?}",
-                        progress.load(Ordering::SeqCst)
-                    );
-                }
             }
             let _ = mem::take(&mut f.out_cdf);
         }
@@ -4915,7 +4877,6 @@ pub(crate) fn rav1d_decode_frame_exit(
     f.tiles.clear();
     task_thread.finished.store(true, Ordering::SeqCst);
     *task_thread.retval.try_lock().unwrap() = retval.err();
-    println!("RETVAL {:?}", retval);
     retval
 }
 
@@ -5037,7 +4998,6 @@ pub fn rav1d_submit_frame(c: &Rav1dContext, state: &mut Rav1dState) -> Rav1dResu
         cached_error_props: &mut Rav1dDataProps,
         m: &Rav1dDataProps,
     ) {
-        println!("TASK THREAD ERROR STORE 5001");
         fc.task_thread.error.store(1, Ordering::Relaxed);
         let _ = mem::take(&mut *fc.in_cdf.try_write().unwrap());
         if f.frame_hdr.as_ref().unwrap().refresh_context != 0 {
