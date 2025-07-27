@@ -71,7 +71,9 @@
 )]
 
 #[cfg(not(any(feature = "bitdepth_8", feature = "bitdepth_16")))]
-compile_error!("No bitdepths enabled. Enable one or more of the following features: `bitdepth_8`, `bitdepth_16`");
+compile_error!(
+    "No bitdepths enabled. Enable one or more of the following features: `bitdepth_8`, `bitdepth_16`"
+);
 
 pub mod include {
     pub mod common {
@@ -158,15 +160,15 @@ use crate::c_box::FnFree;
 use crate::cpu::rav1d_init_cpu;
 use crate::cpu::rav1d_num_logical_processors;
 use crate::decode::rav1d_decode_frame_exit;
-use crate::error::Rav1dError::EGeneric;
 use crate::error::Rav1dError::EAGAIN;
+use crate::error::Rav1dError::EGeneric;
 use crate::error::Rav1dError::EINVAL;
 use crate::error::Rav1dResult;
 use crate::extensions::OptionError as _;
-#[cfg(feature = "bitdepth_16")]
-use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
+#[cfg(feature = "bitdepth_16")]
+use crate::include::common::bitdepth::BitDepth16;
 use crate::include::common::validate::validate_input;
 use crate::include::dav1d::common::Dav1dDataProps;
 use crate::include::dav1d::common::Rav1dDataProps;
@@ -197,27 +199,27 @@ use crate::log::Rav1dLog as _;
 use crate::log::Rav1dLogger;
 use crate::obu::rav1d_parse_obus;
 use crate::obu::rav1d_parse_sequence_header;
-use crate::picture::rav1d_picture_alloc_copy;
 use crate::picture::PictureFlags;
+use crate::picture::rav1d_picture_alloc_copy;
 use crate::send_sync_non_null::SendSyncNonNull;
+use crate::thread_task::FRAME_ERROR;
 use crate::thread_task::rav1d_task_delayed_fg;
 use crate::thread_task::rav1d_worker_task;
-use crate::thread_task::FRAME_ERROR;
 use parking_lot::Mutex;
 use std::cmp;
+use std::ffi::CStr;
 use std::ffi::c_char;
 use std::ffi::c_uint;
 use std::ffi::c_void;
-use std::ffi::CStr;
 use std::mem;
 use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
+use std::sync::Arc;
+use std::sync::Once;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Once;
 use std::thread;
 use to_method::To as _;
 
@@ -666,7 +668,6 @@ fn gen_picture(c: &Rav1dContext, state: &mut Rav1dState) -> Rav1dResult {
         }
         len?;
     }
-    println!("GEN PICTURE");
     Ok(())
 }
 
@@ -718,17 +719,12 @@ pub unsafe extern "C" fn dav1d_send_data(
 pub(crate) fn rav1d_get_picture(c: &Rav1dContext, out: &mut Rav1dPicture) -> Rav1dResult {
     let state = &mut *c.state.try_lock().unwrap();
     let drain = mem::replace(&mut state.drain, true);
-    println!("RAV1D GET PICTURE");
     gen_picture(c, state)?;
-    println!("GOT PICTURE");
     mem::take(&mut state.cached_error).err_or(())?;
-    println!("PASSED CACHED ERROR");
     if output_picture_ready(c, state, c.fc.len() == 1) {
-        println!("OUT IMAGE");
         return output_image(c, state, out);
     }
     if c.fc.len() > 1 && drain {
-        println!("DRAIN PIC");
         return drain_picture(c, state, out);
     }
     Err(EAGAIN)
