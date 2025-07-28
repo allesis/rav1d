@@ -16,12 +16,12 @@ use crate::ctx::CaseSet;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
 use crate::include::common::bitdepth::{
-    AsPrimitive, AsPrimitive, BPC, BPC, BitDepth, BitDepth, ToPrimitive, ToPrimitive,
+    AsPrimitive, BPC, BPC, BitDepth, BitDepth, ToPrimitive, ToPrimitive,
 };
 use crate::include::common::dump::{
-    ac_dump, ac_dump, coef_dump, coef_dump, hex_dump, hex_dump, hex_dump_pic, hex_dump_pic,
+    ac_dump, coef_dump, coef_dump, hex_dump, hex_dump, hex_dump_pic, hex_dump_pic,
 };
-use crate::include::common::intops::{apply_sign64, apply_sign64, clip, clip, ulog2, ulog2};
+use crate::include::common::intops::{apply_sign64, clip, clip, ulog2, ulog2};
 use crate::include::dav1d::dav1d::Rav1dInloopFilterType;
 use crate::include::dav1d::headers::{
     Rav1dPixelLayout, Rav1dPixelLayoutSubSampled, Rav1dPixelLayoutSubSampled,
@@ -37,25 +37,23 @@ use crate::internal::{
     TileStateRef, TileStateRef,
 };
 use crate::intra_edge::EdgeFlags;
-use crate::ipred_prepare::{
-    rav1d_prepare_intra_edges, rav1d_prepare_intra_edges, sm_flag, sm_flag, sm_uv_flag, sm_uv_flag,
-};
+use crate::ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_flag, sm_uv_flag, sm_uv_flag};
 use crate::levels::{
-    Av1Block, Av1Block, Av1BlockInter, Av1BlockInter, Av1BlockIntra, Av1BlockIntra,
-    Av1BlockIntraInter, Av1BlockIntraInter, BlockSize, BlockSize, CFL_PRED, CFL_PRED,
-    CompInterType, CompInterType, DC_PRED, DC_PRED, DCT_DCT, DCT_DCT, FILTER_PRED, FILTER_PRED,
-    Filter2d, Filter2d, GLOBALMV, GLOBALMV, GLOBALMV_GLOBALMV, GLOBALMV_GLOBALMV, IDTX, IDTX,
-    InterIntraPredMode, InterIntraPredMode, InterIntraType, InterIntraType, IntraPredMode,
-    IntraPredMode, MotionMode, MotionMode, Mv, Mv, SMOOTH_PRED, SMOOTH_PRED, TxClass, TxClass,
-    TxfmSize, TxfmSize, TxfmType, TxfmType, WHT_WHT, WHT_WHT,
+    Av1Block, Av1BlockInter, Av1BlockInter, Av1BlockIntra, Av1BlockIntra, Av1BlockIntraInter,
+    Av1BlockIntraInter, BlockSize, BlockSize, CFL_PRED, CFL_PRED, CompInterType, CompInterType,
+    DC_PRED, DC_PRED, DCT_DCT, DCT_DCT, FILTER_PRED, FILTER_PRED, Filter2d, Filter2d, GLOBALMV,
+    GLOBALMV, GLOBALMV_GLOBALMV, GLOBALMV_GLOBALMV, IDTX, IDTX, InterIntraPredMode,
+    InterIntraPredMode, InterIntraType, InterIntraType, IntraPredMode, IntraPredMode, MotionMode,
+    MotionMode, Mv, Mv, SMOOTH_PRED, SMOOTH_PRED, TxClass, TxClass, TxfmSize, TxfmSize, TxfmType,
+    TxfmType, WHT_WHT, WHT_WHT,
 };
 use crate::lf_apply::{
-    rav1d_copy_lpf, rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_cols,
+    rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_cols,
     rav1d_loopfilter_sbrow_rows, rav1d_loopfilter_sbrow_rows,
 };
 use crate::lr_apply::rav1d_lr_sbrow;
 use crate::msac::{
-    MsacContext, MsacContext, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_adapt,
+    MsacContext, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_adapt,
     rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi,
     rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi,
     rav1d_msac_decode_bool_rust, rav1d_msac_decode_bools, rav1d_msac_decode_bools,
@@ -547,25 +545,6 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    println!("EOB {:?}", eob);
-    hash
-}
-
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    coeffs.iter().for_each(|coeff| {
-        if *coeff == 0 {
-        } else {
-            (*coeff).hash(&mut hasher)
-        }
-    });
-    eob.hash(&mut hasher);
-    width.hash(&mut hasher);
-    height.hash(&mut hasher);
-    let hash = hasher.finish();
-    println!("EOB {:?}", eob);
     hash
 }
 
