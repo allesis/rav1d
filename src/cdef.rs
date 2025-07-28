@@ -1,15 +1,14 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_uint};
-use std::{cmp, ptr};
+use std::{
+    cmp,
+    ffi::{c_int, c_uint},
+    ptr,
+};
 
 use bitflags::bitflags;
 use libc::ptrdiff_t;
 
-use crate::align::AlignedVec64;
-use crate::cpu::CpuFlags;
-use crate::disjoint_mut::DisjointMut;
-use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
@@ -19,16 +18,24 @@ use crate::include::common::bitdepth::bd_fn;
 use crate::include::common::bitdepth::bpc_fn;
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
 use crate::include::common::bitdepth::BPC;
-use crate::include::common::bitdepth::{AsPrimitive, BitDepth, DynPixel, LeftPixelRow2px};
-use crate::include::common::intops::{apply_sign, iclip};
-use crate::include::dav1d::picture::{
-    FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
+use crate::{
+    align::AlignedVec64,
+    cpu::CpuFlags,
+    disjoint_mut::DisjointMut,
+    ffi_safe::FFISafe,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, DynPixel, LeftPixelRow2px},
+            intops::{apply_sign, iclip},
+        },
+        dav1d::picture::{FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset},
+    },
+    pic_or_buf::PicOrBuf,
+    strided::Strided as _,
+    tables::DAV1D_CDEF_DIRECTIONS,
+    with_offset::WithOffset,
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::pic_or_buf::PicOrBuf;
-use crate::strided::Strided as _;
-use crate::tables::DAV1D_CDEF_DIRECTIONS;
-use crate::with_offset::WithOffset;
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 bitflags! {
     #[repr(transparent)]

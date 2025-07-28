@@ -1,22 +1,24 @@
-use std::cmp;
-use std::ffi::c_int;
-use std::mem::MaybeUninit;
+use std::{cmp, ffi::c_int, mem::MaybeUninit};
 
 use libc::ptrdiff_t;
 use parking_lot::RwLock;
 use zerocopy::FromBytes;
 
-use crate::align::{Align16, AlignedVec2, ArrayDefault};
-use crate::ctx::CaseSet;
-use crate::disjoint_mut::DisjointMut;
-use crate::include::common::intops::{clip, iclip};
-use crate::include::dav1d::headers::{
-    Rav1dFrameHeader, Rav1dLoopfilterModeRefDeltas, Rav1dPixelLayout, Rav1dRestorationType,
+use crate::{
+    align::{Align16, AlignedVec2, ArrayDefault},
+    ctx::CaseSet,
+    disjoint_mut::DisjointMut,
+    include::{
+        common::intops::{clip, iclip},
+        dav1d::headers::{
+            Rav1dFrameHeader, Rav1dLoopfilterModeRefDeltas, Rav1dPixelLayout, Rav1dRestorationType,
+        },
+    },
+    internal::Bxy,
+    levels::{BlockSize, SegmentId, TxfmSize},
+    relaxed_atomic::RelaxedAtomic,
+    tables::DAV1D_TXFM_DIMENSIONS,
 };
-use crate::internal::Bxy;
-use crate::levels::{BlockSize, SegmentId, TxfmSize};
-use crate::relaxed_atomic::RelaxedAtomic;
-use crate::tables::DAV1D_TXFM_DIMENSIONS;
 
 #[repr(C)]
 pub struct Av1FilterLUT {

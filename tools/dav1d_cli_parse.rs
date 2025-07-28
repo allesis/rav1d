@@ -1,10 +1,11 @@
-use std::ffi::{c_char, c_double, c_int, c_uint, c_ulong, c_void, CStr};
-use std::process::exit;
-use std::ptr::NonNull;
+use std::{
+    ffi::{c_char, c_double, c_int, c_uint, c_ulong, c_void, CStr},
+    process::exit,
+    ptr::NonNull,
+};
 
 use cfg_if::cfg_if;
 use libc::{fprintf, memset, strcat, strcmp, strcpy, strncmp, strtod, strtoul};
-use rav1d::cpu::dav1d_set_cpu_flags_mask;
 #[cfg(any(
     target_arch = "arm",
     target_arch = "aarch64",
@@ -12,16 +13,21 @@ use rav1d::cpu::dav1d_set_cpu_flags_mask;
     target_arch = "riscv64"
 ))]
 use rav1d::cpu::CpuFlags;
-use rav1d::include::dav1d::dav1d::{
-    Dav1dDecodeFrameType, Dav1dInloopFilterType, Dav1dSettings, DAV1D_DECODEFRAMETYPE_ALL,
-    DAV1D_DECODEFRAMETYPE_INTRA, DAV1D_DECODEFRAMETYPE_KEY, DAV1D_DECODEFRAMETYPE_REFERENCE,
-    DAV1D_INLOOPFILTER_ALL, DAV1D_INLOOPFILTER_CDEF, DAV1D_INLOOPFILTER_DEBLOCK,
-    DAV1D_INLOOPFILTER_NONE, DAV1D_INLOOPFILTER_RESTORATION,
+use rav1d::{
+    cpu::dav1d_set_cpu_flags_mask,
+    dav1d_default_settings, dav1d_version,
+    include::dav1d::dav1d::{
+        Dav1dDecodeFrameType, Dav1dInloopFilterType, Dav1dSettings, DAV1D_DECODEFRAMETYPE_ALL,
+        DAV1D_DECODEFRAMETYPE_INTRA, DAV1D_DECODEFRAMETYPE_KEY, DAV1D_DECODEFRAMETYPE_REFERENCE,
+        DAV1D_INLOOPFILTER_ALL, DAV1D_INLOOPFILTER_CDEF, DAV1D_INLOOPFILTER_DEBLOCK,
+        DAV1D_INLOOPFILTER_NONE, DAV1D_INLOOPFILTER_RESTORATION,
+    },
 };
-use rav1d::{dav1d_default_settings, dav1d_version};
 
-use crate::compat::getopt::{getopt_long, option};
-use crate::compat::stdio::stderr;
+use crate::compat::{
+    getopt::{getopt_long, option},
+    stdio::stderr,
+};
 
 extern "C" {
     static mut optarg: *mut c_char;

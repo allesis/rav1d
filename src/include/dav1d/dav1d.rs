@@ -3,14 +3,16 @@ use std::ffi::{c_int, c_uint};
 use bitflags::bitflags;
 use strum::FromRepr;
 
-use crate::c_arc::RawArc;
-use crate::error::Rav1dError;
-use crate::in_range::InRange;
-use crate::include::dav1d::picture::{Dav1dPicAllocator, Rav1dPicAllocator};
-use crate::internal::Rav1dContext;
 pub use crate::log::Dav1dLogger;
-use crate::log::Rav1dLogger;
-use crate::validate_input;
+use crate::{
+    c_arc::RawArc,
+    error::Rav1dError,
+    in_range::InRange,
+    include::dav1d::picture::{Dav1dPicAllocator, Rav1dPicAllocator},
+    internal::Rav1dContext,
+    log::Rav1dLogger,
+    validate_input,
+};
 
 pub type Dav1dContext = RawArc<Rav1dContext>;
 

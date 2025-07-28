@@ -1,7 +1,9 @@
-use std::ffi::c_uint;
-use std::num::NonZero;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::thread::available_parallelism;
+use std::{
+    ffi::c_uint,
+    num::NonZero,
+    sync::atomic::{AtomicU32, Ordering},
+    thread::available_parallelism,
+};
 
 use bitflags::bitflags;
 

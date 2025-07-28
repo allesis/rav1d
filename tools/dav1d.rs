@@ -16,37 +16,44 @@ mod output {
 } // mod output
 mod dav1d_cli_parse;
 
-use std::ffi::{c_char, c_double, c_int, c_uint, c_ulonglong, c_void};
-use std::ptr::NonNull;
-use std::time::Duration;
+use std::{
+    ffi::{c_char, c_double, c_int, c_uint, c_ulonglong, c_void},
+    ptr::NonNull,
+    time::Duration,
+};
 
 use libc::{
     calloc, fclose, fflush, fileno, fopen, fprintf, fputs, free, isatty, memset, ptrdiff_t, strcpy,
     strerror, EAGAIN, EINVAL,
 };
-use rav1d::include::dav1d::common::{Dav1dDataProps, Dav1dUserData};
-use rav1d::include::dav1d::data::Dav1dData;
-use rav1d::include::dav1d::dav1d::{
-    Dav1dContext, Dav1dLogger, Dav1dSettings, DAV1D_DECODEFRAMETYPE_ALL, DAV1D_INLOOPFILTER_NONE,
-};
-use rav1d::include::dav1d::headers::{
-    Dav1dColorPrimaries, Dav1dSequenceHeader, Dav1dSequenceHeaderOperatingParameterInfo,
-    Dav1dSequenceHeaderOperatingPoint, Dav1dTransferCharacteristics, DAV1D_CHR_UNKNOWN,
-    DAV1D_MC_IDENTITY, DAV1D_OFF, DAV1D_PIXEL_LAYOUT_I400, DAV1D_PIXEL_LAYOUT_I420,
-    DAV1D_PIXEL_LAYOUT_I444,
-};
-use rav1d::include::dav1d::picture::{Dav1dPicAllocator, Dav1dPicture, DAV1D_PICTURE_ALIGNMENT};
-use rav1d::send_sync_non_null::SendSyncNonNull;
 use rav1d::{
     dav1d_close, dav1d_data_unref, dav1d_get_picture, dav1d_open, dav1d_parse_sequence_header,
-    dav1d_send_data, dav1d_version, dav1d_version_api, Dav1dResult, DAV1D_API_VERSION_MAJOR,
-    DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH,
+    dav1d_send_data, dav1d_version, dav1d_version_api,
+    include::dav1d::{
+        common::{Dav1dDataProps, Dav1dUserData},
+        data::Dav1dData,
+        dav1d::{
+            Dav1dContext, Dav1dLogger, Dav1dSettings, DAV1D_DECODEFRAMETYPE_ALL,
+            DAV1D_INLOOPFILTER_NONE,
+        },
+        headers::{
+            Dav1dColorPrimaries, Dav1dSequenceHeader, Dav1dSequenceHeaderOperatingParameterInfo,
+            Dav1dSequenceHeaderOperatingPoint, Dav1dTransferCharacteristics, DAV1D_CHR_UNKNOWN,
+            DAV1D_MC_IDENTITY, DAV1D_OFF, DAV1D_PIXEL_LAYOUT_I400, DAV1D_PIXEL_LAYOUT_I420,
+            DAV1D_PIXEL_LAYOUT_I444,
+        },
+        picture::{Dav1dPicAllocator, Dav1dPicture, DAV1D_PICTURE_ALIGNMENT},
+    },
+    send_sync_non_null::SendSyncNonNull,
+    Dav1dResult, DAV1D_API_VERSION_MAJOR, DAV1D_API_VERSION_MINOR, DAV1D_API_VERSION_PATCH,
 };
 
-use crate::compat::stdio::{snprintf, stderr};
-use crate::dav1d_cli_parse::{parse, CLISettings, REALTIME_CUSTOM, REALTIME_DISABLE};
-use crate::input::input::{input_close, input_open, input_read, DemuxerContext};
-use crate::output::output::{output_close, output_open, output_verify, output_write, MuxerContext};
+use crate::{
+    compat::stdio::{snprintf, stderr},
+    dav1d_cli_parse::{parse, CLISettings, REALTIME_CUSTOM, REALTIME_DISABLE},
+    input::input::{input_close, input_open, input_read, DemuxerContext},
+    output::output::{output_close, output_open, output_verify, output_write, MuxerContext},
+};
 
 #[cfg(target_os = "windows")]
 unsafe fn get_time_nanos() -> u64 {

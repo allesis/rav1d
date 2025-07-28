@@ -1,8 +1,12 @@
 use std::ffi::c_int;
 
-use crate::include::common::intops::{apply_sign, apply_sign64, iclip, u64log2, ulog2};
-use crate::include::dav1d::headers::Rav1dWarpedMotionParams;
-use crate::levels::Mv;
+use crate::{
+    include::{
+        common::intops::{apply_sign, apply_sign64, iclip, u64log2, ulog2},
+        dav1d::headers::Rav1dWarpedMotionParams,
+    },
+    levels::Mv,
+};
 
 static DIV_LUT: [u16; 257] = [
     16384, 16320, 16257, 16194, 16132, 16070, 16009, 15948, 15888, 15828, 15768, 15709, 15650,

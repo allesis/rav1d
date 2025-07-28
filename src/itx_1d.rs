@@ -37,8 +37,7 @@
 //! e.g. x86 assembly, integer overflows are not considered UB, but they merely
 //! wrap around.
 
-use std::ffi::c_int;
-use std::num::NonZeroUsize;
+use std::{ffi::c_int, num::NonZeroUsize};
 
 use crate::include::common::intops::iclip;
 

@@ -1,6 +1,8 @@
-use std::error::Error;
-use std::ffi::{c_int, c_uint};
-use std::fmt::{self, Display, Formatter};
+use std::{
+    error::Error,
+    ffi::{c_int, c_uint},
+    fmt::{self, Display, Formatter},
+};
 
 use strum::FromRepr;
 

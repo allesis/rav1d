@@ -1,83 +1,72 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::collections::HashMap;
-use std::ffi::{c_int, c_uint, c_uint};
-use std::hint::assert_unchecked;
-use std::ops::BitOr;
-use std::sync::{Arc, Mutex};
-use std::{array, cmp, cmp, ptr, ptr};
+use std::{
+    array, cmp,
+    collections::HashMap,
+    ffi::{c_int, c_uint},
+    hint::assert_unchecked,
+    ops::BitOr,
+    ptr,
+    sync::{Arc, Mutex},
+};
 
 use assert_matches::debug_assert_matches;
 use libc::intptr_t;
 use to_method::To as _;
 
-use crate::cdef_apply::rav1d_cdef_brow;
-use crate::ctx::CaseSet;
-use crate::env::get_uv_inter_txtp;
-use crate::in_range::InRange;
-use crate::include::common::bitdepth::{
-    AsPrimitive, BitDepth, BitDepth, ToPrimitive, ToPrimitive, BPC, BPC,
+use crate::{
+    cdef_apply::rav1d_cdef_brow,
+    ctx::CaseSet,
+    env::get_uv_inter_txtp,
+    in_range::InRange,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, ToPrimitive, BPC},
+            dump::{ac_dump, coef_dump, hex_dump, hex_dump_pic},
+            intops::{apply_sign64, clip, ulog2},
+        },
+        dav1d::{
+            dav1d::Rav1dInloopFilterType,
+            headers::{
+                Rav1dPixelLayout, Rav1dPixelLayoutSubSampled, Rav1dWarpedMotionParams,
+                Rav1dWarpedMotionType,
+            },
+            picture::{Rav1dPictureDataComponent, Rav1dPictureDataComponentOffset},
+        },
+    },
+    internal::{
+        Bxy, Cf, CodedBlockInfo, HashObject, Rav1dContext, Rav1dFrameData, Rav1dTaskContext,
+        Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
+    },
+    intra_edge::EdgeFlags,
+    ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
+    levels::{
+        Av1Block, Av1BlockInter, Av1BlockIntra, Av1BlockIntraInter, BlockSize, CompInterType,
+        Filter2d, InterIntraPredMode, InterIntraType, IntraPredMode, MotionMode, Mv, TxClass,
+        TxfmSize, TxfmType, CFL_PRED, DCT_DCT, DC_PRED, FILTER_PRED, GLOBALMV, GLOBALMV_GLOBALMV,
+        IDTX, SMOOTH_PRED, WHT_WHT,
+    },
+    lf_apply::{rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_rows},
+    lr_apply::rav1d_lr_sbrow,
+    msac::{
+        rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_rust,
+        rav1d_msac_decode_bools, rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt16,
+        rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt8, MsacContext,
+    },
+    picture::Rav1dThreadPicture,
+    pixels::Pixels as _,
+    scan::DAV1D_SCANS,
+    strided::Strided as _,
+    tables::{
+        dav1d_filter_2d, dav1d_filter_mode_to_y_mode, dav1d_lo_ctx_offsets, dav1d_skip_ctx,
+        dav1d_tx_type_class, dav1d_tx_types_per_set, dav1d_txfm_dimensions, dav1d_txtp_from_uvmode,
+        LoCtxOffset, TxfmInfo, DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE, DAV1D_LO_CTX_OFFSETS,
+        DAV1D_SKIP_CTX, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE, DAV1D_TX_TYPES_PER_SET,
+        DAV1D_TX_TYPE_CLASS,
+    },
+    wedge::{dav1d_ii_masks, dav1d_wedge_masks, DAV1D_II_MASKS, DAV1D_WEDGE_MASKS},
+    with_offset::WithOffset,
 };
-use crate::include::common::dump::{
-    ac_dump, coef_dump, coef_dump, hex_dump, hex_dump, hex_dump_pic, hex_dump_pic,
-};
-use crate::include::common::intops::{apply_sign64, clip, clip, ulog2, ulog2};
-use crate::include::dav1d::dav1d::Rav1dInloopFilterType;
-use crate::include::dav1d::headers::{
-    Rav1dPixelLayout, Rav1dPixelLayoutSubSampled, Rav1dPixelLayoutSubSampled,
-    Rav1dWarpedMotionParams, Rav1dWarpedMotionParams, Rav1dWarpedMotionType, Rav1dWarpedMotionType,
-};
-use crate::include::dav1d::picture::{
-    Rav1dPictureDataComponent, Rav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
-};
-use crate::internal::{
-    Bxy, Cf, Cf, CodedBlockInfo, CodedBlockInfo, HashObject, Rav1dContext, Rav1dContext,
-    Rav1dFrameData, Rav1dFrameData, Rav1dTaskContext, Rav1dTaskContext, Rav1dTileStateContext,
-    Rav1dTileStateContext, ScratchEmuEdge, ScratchEmuEdge, TaskContextScratch, TaskContextScratch,
-    TileStateRef, TileStateRef,
-};
-use crate::intra_edge::EdgeFlags;
-use crate::ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_flag, sm_uv_flag, sm_uv_flag};
-use crate::levels::{
-    Av1Block, Av1BlockInter, Av1BlockInter, Av1BlockIntra, Av1BlockIntra, Av1BlockIntraInter,
-    Av1BlockIntraInter, BlockSize, BlockSize, CompInterType, CompInterType, Filter2d, Filter2d,
-    InterIntraPredMode, InterIntraPredMode, InterIntraType, InterIntraType, IntraPredMode,
-    IntraPredMode, MotionMode, MotionMode, Mv, Mv, TxClass, TxClass, TxfmSize, TxfmSize, TxfmType,
-    TxfmType, CFL_PRED, CFL_PRED, DCT_DCT, DCT_DCT, DC_PRED, DC_PRED, FILTER_PRED, FILTER_PRED,
-    GLOBALMV, GLOBALMV, GLOBALMV_GLOBALMV, GLOBALMV_GLOBALMV, IDTX, IDTX, SMOOTH_PRED, SMOOTH_PRED,
-    WHT_WHT, WHT_WHT,
-};
-use crate::lf_apply::{
-    rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_cols,
-    rav1d_loopfilter_sbrow_rows, rav1d_loopfilter_sbrow_rows,
-};
-use crate::lr_apply::rav1d_lr_sbrow;
-use crate::msac::{
-    rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi,
-    rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_rust,
-    rav1d_msac_decode_bools, rav1d_msac_decode_bools, rav1d_msac_decode_bools,
-    rav1d_msac_decode_bools, rav1d_msac_decode_hi_tok, rav1d_msac_decode_hi_tok,
-    rav1d_msac_decode_hi_tok, rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt16,
-    rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt16,
-    rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt4,
-    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt4,
-    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt8,
-    rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt8,
-    rav1d_msac_decode_symbol_adapt8, MsacContext,
-};
-use crate::picture::Rav1dThreadPicture;
-use crate::pixels::Pixels as _;
-use crate::scan::DAV1D_SCANS;
-use crate::strided::Strided as _;
-use crate::tables::{
-    dav1d_filter_2d, dav1d_filter_mode_to_y_mode, dav1d_lo_ctx_offsets, dav1d_skip_ctx,
-    dav1d_tx_type_class, dav1d_tx_types_per_set, dav1d_txfm_dimensions, dav1d_txtp_from_uvmode,
-    LoCtxOffset, TxfmInfo, TxfmInfo, DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE,
-    DAV1D_LO_CTX_OFFSETS, DAV1D_SKIP_CTX, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE,
-    DAV1D_TX_TYPES_PER_SET, DAV1D_TX_TYPE_CLASS,
-};
-use crate::wedge::{dav1d_ii_masks, dav1d_wedge_masks, DAV1D_II_MASKS, DAV1D_WEDGE_MASKS};
-use crate::with_offset::WithOffset;
 
 impl Bxy {
     pub fn debug_block_info(&self) -> bool {
@@ -530,8 +519,10 @@ fn get_lo_ctx(
     LoCdfIndex::new(lo_ctx).unwrap() // Elided
 }
 
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {

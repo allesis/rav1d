@@ -2,13 +2,19 @@
 
 use std::cmp;
 
-use crate::align::ArrayDefault;
-use crate::filmgrain::{Rav1dFilmGrainDSPContext, FG_BLOCK_SIZE};
-use crate::include::common::bitdepth::{BitDepth, BPC};
-use crate::include::dav1d::headers::{Rav1dMatrixCoefficients, Rav1dPixelLayout};
-use crate::include::dav1d::picture::Rav1dPicture;
-use crate::internal::GrainBD;
-use crate::strided::Strided as _;
+use crate::{
+    align::ArrayDefault,
+    filmgrain::{Rav1dFilmGrainDSPContext, FG_BLOCK_SIZE},
+    include::{
+        common::bitdepth::{BitDepth, BPC},
+        dav1d::{
+            headers::{Rav1dMatrixCoefficients, Rav1dPixelLayout},
+            picture::Rav1dPicture,
+        },
+    },
+    internal::GrainBD,
+    strided::Strided as _,
+};
 
 fn generate_scaling<BD: BitDepth>(bd: BD, points: &[[u8; 2]]) -> BD::Scaling {
     let mut scaling_array = ArrayDefault::default();

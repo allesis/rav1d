@@ -1,35 +1,36 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_void};
-use std::ptr::{fn_addr_eq, NonNull};
-use std::sync::atomic::AtomicU32;
-use std::sync::Arc;
-use std::{mem, ptr};
+use std::{
+    ffi::{c_int, c_void},
+    mem, ptr,
+    ptr::{fn_addr_eq, NonNull},
+    sync::{atomic::AtomicU32, Arc},
+};
 
 use bitflags::bitflags;
 use libc::ptrdiff_t;
 use to_method::To as _;
 
-use crate::error::Rav1dError::EGeneric;
-use crate::error::{Dav1dResult, Dav1dResult, Rav1dError, Rav1dResult, Rav1dResult};
-use crate::include::dav1d::common::Rav1dDataProps;
-use crate::include::dav1d::dav1d::Rav1dEventFlags;
-use crate::include::dav1d::headers::{
-    DRav1d, DRav1d, Dav1dFrameHeader, Dav1dFrameHeader, Dav1dITUTT35, Dav1dITUTT35,
-    Dav1dSequenceHeader, Dav1dSequenceHeader, Rav1dContentLightLevel, Rav1dContentLightLevel,
-    Rav1dFrameHeader, Rav1dFrameHeader, Rav1dITUTT35, Rav1dITUTT35, Rav1dMasteringDisplay,
-    Rav1dMasteringDisplay, Rav1dPixelLayout, Rav1dPixelLayout, Rav1dSequenceHeader,
-    Rav1dSequenceHeader,
+use crate::{
+    error::{Dav1dResult, Rav1dError, Rav1dError::EGeneric, Rav1dResult},
+    include::dav1d::{
+        common::Rav1dDataProps,
+        dav1d::Rav1dEventFlags,
+        headers::{
+            DRav1d, Dav1dFrameHeader, Dav1dITUTT35, Dav1dSequenceHeader, Rav1dContentLightLevel,
+            Rav1dFrameHeader, Rav1dITUTT35, Rav1dMasteringDisplay, Rav1dPixelLayout,
+            Rav1dSequenceHeader,
+        },
+        picture::{
+            Dav1dPicture, Rav1dPicAllocator, Rav1dPicture, Rav1dPictureParameters,
+            RAV1D_PICTURE_ALIGNMENT,
+        },
+    },
+    internal::{Rav1dFrameContext, Rav1dFrameData},
+    log::{Rav1dLog as _, Rav1dLogger},
+    pool::MemPool,
+    send_sync_non_null::SendSyncNonNull,
 };
-use crate::include::dav1d::picture::{
-    Dav1dPicture, Dav1dPicture, Rav1dPicAllocator, Rav1dPicAllocator, Rav1dPicture, Rav1dPicture,
-    Rav1dPictureParameters, Rav1dPictureParameters, RAV1D_PICTURE_ALIGNMENT,
-    RAV1D_PICTURE_ALIGNMENT,
-};
-use crate::internal::{Rav1dFrameContext, Rav1dFrameContext, Rav1dFrameData, Rav1dFrameData};
-use crate::log::{Rav1dLog as _, Rav1dLog as _, Rav1dLogger, Rav1dLogger};
-use crate::pool::MemPool;
-use crate::send_sync_non_null::SendSyncNonNull;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct PictureFlags(u8);

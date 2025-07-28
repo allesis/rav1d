@@ -1,8 +1,6 @@
 use strum::EnumCount;
 
-use crate::align::Align32;
-use crate::in_range::InRange;
-use crate::levels::TxfmSize;
+use crate::{align::Align32, in_range::InRange, levels::TxfmSize};
 
 type Scan = InRange<u16, 0, { 1024 - 1 }>;
 

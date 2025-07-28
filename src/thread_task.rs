@@ -1,38 +1,45 @@
-use std::ffi::{c_int, c_int, c_uint, c_uint};
-use std::num::NonZeroU32;
-use std::ops::{Add, Add, AddAssign, AddAssign, Deref, Deref};
-use std::process::abort;
-use std::sync::atomic::{AtomicBool, AtomicBool, AtomicI32, AtomicI32, Ordering, Ordering};
-use std::sync::Arc;
-use std::{cmp, cmp, mem, mem, thread, thread};
-
-use atomig::{Atom, Atom, Atomic, Atomic};
-use parking_lot::{
-    Mutex, Mutex, MutexGuard, MutexGuard, RwLock, RwLock, RwLockReadGuard, RwLockReadGuard,
+use std::{
+    cmp,
+    ffi::{c_int, c_uint},
+    mem,
+    num::NonZeroU32,
+    ops::{Add, AddAssign, Deref},
+    process::abort,
+    sync::{
+        atomic::{AtomicBool, AtomicI32, Ordering},
+        Arc,
+    },
+    thread,
 };
 
-use crate::cdf::rav1d_cdf_thread_update;
-use crate::decode::{
-    rav1d_decode_frame_exit, rav1d_decode_frame_init, rav1d_decode_frame_init_cdf,
-    rav1d_decode_tile_sbrow,
-};
-use crate::error::{Rav1dError, Rav1dResult};
-use crate::fg_apply::{rav1d_apply_grain_row, rav1d_prep_grain};
-use crate::filmgrain::FG_BLOCK_SIZE;
+use atomig::{Atom, Atomic};
+use parking_lot::{Mutex, MutexGuard, RwLock, RwLockReadGuard};
+
 #[cfg(feature = "bitdepth_16")]
 use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
-use crate::include::common::intops::iclip;
-use crate::include::dav1d::headers::Rav1dPixelLayout;
-use crate::include::dav1d::picture::Rav1dPicture;
-use crate::internal::{
-    Grain, Rav1dBitDepthDSPContext, Rav1dContext, Rav1dFrameContext, Rav1dFrameContextTaskThread,
-    Rav1dFrameData, Rav1dTask, Rav1dTaskContext, Rav1dTaskContextTaskThread, TaskThreadData,
-    TaskType,
+use crate::{
+    cdf::rav1d_cdf_thread_update,
+    decode::{
+        rav1d_decode_frame_exit, rav1d_decode_frame_init, rav1d_decode_frame_init_cdf,
+        rav1d_decode_tile_sbrow,
+    },
+    error::{Rav1dError, Rav1dResult},
+    fg_apply::{rav1d_apply_grain_row, rav1d_prep_grain},
+    filmgrain::FG_BLOCK_SIZE,
+    include::{
+        common::intops::iclip,
+        dav1d::{headers::Rav1dPixelLayout, picture::Rav1dPicture},
+    },
+    internal::{
+        Grain, Rav1dBitDepthDSPContext, Rav1dContext, Rav1dFrameContext,
+        Rav1dFrameContextTaskThread, Rav1dFrameData, Rav1dTask, Rav1dTaskContext,
+        Rav1dTaskContextTaskThread, TaskThreadData, TaskType,
+    },
+    iter::wrapping_iter,
+    relaxed_atomic::RelaxedAtomic,
 };
-use crate::iter::wrapping_iter;
-use crate::relaxed_atomic::RelaxedAtomic;
 
 pub const FRAME_ERROR: u32 = u32::MAX - 1;
 pub const TILE_ERROR: i32 = i32::MAX - 1;

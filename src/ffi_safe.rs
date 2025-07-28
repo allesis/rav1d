@@ -1,5 +1,4 @@
-use std::marker::PhantomData;
-use std::ptr;
+use std::{marker::PhantomData, ptr};
 
 use crate::with_offset::WithOffset;
 

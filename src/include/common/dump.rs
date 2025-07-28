@@ -1,12 +1,11 @@
 #![deny(unsafe_code)]
 
-use std::fmt::Display;
-use std::io;
-use std::io::stdout;
+use std::{fmt::Display, io, io::stdout};
 
-use crate::include::common::bitdepth::BitDepth;
-use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
-use crate::strided::Strided as _;
+use crate::{
+    include::{common::bitdepth::BitDepth, dav1d::picture::Rav1dPictureDataComponentOffset},
+    strided::Strided as _,
+};
 
 #[inline]
 pub fn hex_fdump<BD: BitDepth>(

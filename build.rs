@@ -2,11 +2,7 @@
 
 #[cfg(feature = "asm")]
 mod asm {
-    use std::collections::HashSet;
-    use std::fmt::Display;
-    use std::path::PathBuf;
-    use std::str::FromStr;
-    use std::{env, fs};
+    use std::{collections::HashSet, env, fmt::Display, fs, path::PathBuf, str::FromStr};
 
     #[derive(Clone, Copy, PartialEq, Eq)]
     enum Arch {

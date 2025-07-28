@@ -1,19 +1,18 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_int, c_uint, c_uint};
-use std::ops::Add;
-use std::{cmp, cmp, iter, iter, mem, mem, slice, slice};
+use std::{
+    cmp,
+    ffi::{c_int, c_uint},
+    iter, mem,
+    ops::Add,
+    slice,
+};
 
 use bitflags::bitflags;
 use libc::ptrdiff_t;
 use to_method::To;
-use zerocopy::{AsBytes, AsBytes, FromBytes, FromBytes, FromZeroes, FromZeroes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::align::AlignedVec64;
-use crate::cpu::CpuFlags;
-use crate::cursor::CursorMut;
-use crate::disjoint_mut::DisjointMut;
-use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
     any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")
@@ -21,18 +20,23 @@ use crate::ffi_safe::FFISafe;
 use crate::include::common::bitdepth::bd_fn;
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
 use crate::include::common::bitdepth::bpc_fn;
-use crate::include::common::bitdepth::{
-    AsPrimitive, AsPrimitive, BitDepth, BitDepth, DynPixel, DynPixel, LeftPixelRow, LeftPixelRow,
-    ToPrimitive, ToPrimitive, BPC, BPC,
+use crate::{
+    align::AlignedVec64,
+    cpu::CpuFlags,
+    cursor::CursorMut,
+    disjoint_mut::DisjointMut,
+    ffi_safe::FFISafe,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, DynPixel, LeftPixelRow, ToPrimitive, BPC},
+            intops::iclip,
+        },
+        dav1d::picture::{FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset},
+    },
+    strided::Strided as _,
+    tables::dav1d_sgr_x_by_x,
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::include::common::intops::iclip;
-use crate::include::dav1d::picture::{
-    FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
-    Rav1dPictureDataComponentOffset,
-};
-use crate::strided::Strided as _;
-use crate::tables::dav1d_sgr_x_by_x;
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 bitflags! {
     #[derive(Clone, Copy)]
@@ -959,8 +963,7 @@ mod neon {
     use libc::intptr_t;
 
     use super::*;
-    use crate::align::Align16;
-    use crate::include::common::bitdepth::bd_fn;
+    use crate::{align::Align16, include::common::bitdepth::bd_fn};
 
     wrap_fn_ptr!(unsafe extern "C" fn wiener_filter_h(
         dst: *mut i16,

@@ -1,5 +1,7 @@
-use std::marker::PhantomData;
-use std::ops::{Index, IndexMut};
+use std::{
+    marker::PhantomData,
+    ops::{Index, IndexMut},
+};
 
 pub trait EnumKey<const N: usize>: Sized + Copy {
     const VALUES: [Self; N];

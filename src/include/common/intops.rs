@@ -1,7 +1,9 @@
 use std::ffi::{c_int, c_uint, c_ulonglong};
 
-use crate::include::common::attributes::{clz, clzll};
-use crate::include::common::bitdepth::{AsPrimitive, ToPrimitive};
+use crate::include::common::{
+    attributes::{clz, clzll},
+    bitdepth::{AsPrimitive, ToPrimitive},
+};
 
 /// # Safety
 ///

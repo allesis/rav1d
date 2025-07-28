@@ -1,30 +1,33 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::cmp;
-use std::ffi::c_int;
+use std::{cmp, ffi::c_int};
 
 use libc::ptrdiff_t;
 use strum::FromRepr;
 
-use crate::align::{Align16, AlignedVec2};
-use crate::cpu::CpuFlags;
-use crate::disjoint_mut::DisjointMut;
-use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
 ))]
 use crate::include::common::bitdepth::bd_fn;
-use crate::include::common::bitdepth::{AsPrimitive, BitDepth, DynPixel};
-use crate::include::common::intops::iclip;
-use crate::include::dav1d::picture::{
-    FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
+use crate::{
+    align::{Align16, AlignedVec2},
+    cpu::CpuFlags,
+    disjoint_mut::DisjointMut,
+    ffi_safe::FFISafe,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, DynPixel},
+            intops::iclip,
+        },
+        dav1d::picture::{FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset},
+    },
+    internal::Rav1dFrameData,
+    lf_mask::Av1FilterLUT,
+    strided::Strided as _,
+    with_offset::WithOffset,
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::internal::Rav1dFrameData;
-use crate::lf_mask::Av1FilterLUT;
-use crate::strided::Strided as _;
-use crate::with_offset::WithOffset;
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 wrap_fn_ptr!(pub unsafe extern "C" fn loopfilter_sb(
     dst_ptr: *mut DynPixel,

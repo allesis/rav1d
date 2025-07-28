@@ -1,8 +1,10 @@
-use std::ffi::{c_char, c_uint, c_void};
-use std::fmt;
-use std::fmt::Write as _;
-use std::io::{stderr, stdout, Write as _};
-use std::ptr::fn_addr_eq;
+use std::{
+    ffi::{c_char, c_uint, c_void},
+    fmt,
+    fmt::Write as _,
+    io::{stderr, stdout, Write as _},
+    ptr::fn_addr_eq,
+};
 
 use crate::send_sync_non_null::SendSyncNonNull;
 

@@ -1,14 +1,9 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::c_int;
-use std::{cmp, iter, mem, ptr, slice};
+use std::{cmp, ffi::c_int, iter, mem, ptr, slice};
 
 use to_method::To;
 
-use crate::align::AlignedVec64;
-use crate::cpu::CpuFlags;
-use crate::enum_map::{enum_map, enum_map_ty, DefaultValue};
-use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
@@ -21,24 +16,36 @@ use crate::include::common::bitdepth::bd_fn;
 use crate::include::common::bitdepth::bpc_fn;
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
 use crate::include::common::bitdepth::BPC;
-use crate::include::common::bitdepth::{AsPrimitive, BitDepth, DynPixel};
-use crate::include::common::intops::{clip, iclip};
-use crate::include::dav1d::headers::{Rav1dFilterMode, Rav1dPixelLayoutSubSampled};
-use crate::include::dav1d::picture::{
-    FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponent,
-    Rav1dPictureDataComponentOffset,
+use crate::{
+    align::AlignedVec64,
+    cpu::CpuFlags,
+    enum_map::{enum_map, enum_map_ty, DefaultValue},
+    ffi_safe::FFISafe,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, DynPixel},
+            intops::{clip, iclip},
+        },
+        dav1d::{
+            headers::{Rav1dFilterMode, Rav1dPixelLayoutSubSampled},
+            picture::{
+                FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponent,
+                Rav1dPictureDataComponentOffset,
+            },
+        },
+    },
+    internal::{
+        COMPINTER_LEN, EMU_EDGE_LEN, SCRATCH_INTER_INTRA_BUF_LEN, SCRATCH_LAP_LEN, SEG_MASK_LEN,
+    },
+    levels::Filter2d,
+    pic_or_buf::PicOrBuf,
+    strided::Strided as _,
+    tables::{
+        dav1d_mc_subpel_filters, dav1d_mc_warp_filter, dav1d_obmc_masks, dav1d_resize_filter,
+    },
+    with_offset::WithOffset,
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::internal::{
-    COMPINTER_LEN, EMU_EDGE_LEN, SCRATCH_INTER_INTRA_BUF_LEN, SCRATCH_LAP_LEN, SEG_MASK_LEN,
-};
-use crate::levels::Filter2d;
-use crate::pic_or_buf::PicOrBuf;
-use crate::strided::Strided as _;
-use crate::tables::{
-    dav1d_mc_subpel_filters, dav1d_mc_warp_filter, dav1d_obmc_masks, dav1d_resize_filter,
-};
-use crate::with_offset::WithOffset;
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 #[inline(never)]
 fn put_rust<BD: BitDepth>(

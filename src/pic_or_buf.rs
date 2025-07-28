@@ -1,8 +1,10 @@
-use crate::disjoint_mut::{AsMutPtr, DisjointMut};
-use crate::include::dav1d::picture::Rav1dPictureDataComponent;
-use crate::pixels::Pixels;
-use crate::strided::{Strided, WithStride};
-use crate::with_offset::WithOffset;
+use crate::{
+    disjoint_mut::{AsMutPtr, DisjointMut},
+    include::dav1d::picture::Rav1dPictureDataComponent,
+    pixels::Pixels,
+    strided::{Strided, WithStride},
+    with_offset::WithOffset,
+};
 
 pub enum PicOrBuf<'a, T: AsMutPtr<Target = u8>> {
     Pic(&'a Rav1dPictureDataComponent),

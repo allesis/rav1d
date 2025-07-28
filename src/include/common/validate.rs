@@ -1,5 +1,4 @@
-use std::any::type_name;
-use std::process::abort;
+use std::{any::type_name, process::abort};
 
 fn type_name_of<T>(_: &T) -> &'static str {
     type_name::<T>()

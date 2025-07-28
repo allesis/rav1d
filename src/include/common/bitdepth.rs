@@ -1,12 +1,16 @@
-use std::ffi::{c_int, c_uint, c_void};
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, Div, Mul, Rem, Shr};
+use std::{
+    ffi::{c_int, c_uint, c_void},
+    fmt,
+    fmt::{Display, Formatter},
+    ops::{Add, Div, Mul, Rem, Shr},
+};
 
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::align::{Align16, Align8, ArrayDefault};
-use crate::include::common::intops::clip;
+use crate::{
+    align::{Align16, Align8, ArrayDefault},
+    include::common::intops::clip,
+};
 
 pub trait FromPrimitive<T> {
     fn from_prim(t: T) -> Self;

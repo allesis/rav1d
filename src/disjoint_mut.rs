@@ -3,16 +3,21 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::cell::UnsafeCell;
-use std::fmt::{Debug, Display, Formatter};
-use std::marker::PhantomData;
-use std::mem::ManuallyDrop;
-use std::ops::{
-    Deref, DerefMut, Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+use std::{
+    cell::UnsafeCell,
+    fmt,
+    fmt::{Debug, Display, Formatter},
+    marker::PhantomData,
+    mem,
+    mem::ManuallyDrop,
+    ops::{
+        Deref, DerefMut, Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo,
+        RangeToInclusive,
+    },
+    ptr,
+    ptr::addr_of_mut,
+    sync::Arc,
 };
-use std::ptr::addr_of_mut;
-use std::sync::Arc;
-use std::{fmt, mem, ptr};
 
 use zerocopy::{AsBytes, FromBytes};
 
@@ -765,11 +770,13 @@ mod release {
 
 #[cfg(debug_assertions)]
 mod debug {
-    use std::backtrace::{Backtrace, BacktraceStatus};
-    use std::fmt::Debug;
-    use std::panic::Location;
-    use std::thread;
-    use std::thread::ThreadId;
+    use std::{
+        backtrace::{Backtrace, BacktraceStatus},
+        fmt::Debug,
+        panic::Location,
+        thread,
+        thread::ThreadId,
+    };
 
     use parking_lot::Mutex;
 

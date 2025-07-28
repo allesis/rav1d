@@ -1,38 +1,44 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_uint};
-use std::hint::assert_unchecked;
-use std::ops::{Add, Shl, Shr};
-use std::{cmp, mem, ptr};
+use std::{
+    cmp,
+    ffi::{c_int, c_uint},
+    hint::assert_unchecked,
+    mem,
+    ops::{Add, Shl, Shr},
+    ptr,
+};
 
-use libc::{intptr_t, intptr_t, ptrdiff_t, ptrdiff_t};
+use libc::{intptr_t, ptrdiff_t};
 use to_method::To;
 
-use crate::cpu::CpuFlags;
-use crate::enum_map::{enum_map, enum_map, enum_map_ty, enum_map_ty, DefaultValue, DefaultValue};
-use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
 ))]
 use crate::include::common::bitdepth::bd_fn;
-use crate::include::common::bitdepth::{
-    AsPrimitive, AsPrimitive, BitDepth, BitDepth, DynEntry, DynEntry, DynPixel, DynPixel,
-    DynScaling, DynScaling,
+use crate::{
+    cpu::CpuFlags,
+    enum_map::{enum_map, enum_map_ty, DefaultValue},
+    ffi_safe::FFISafe,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, DynEntry, DynPixel, DynScaling},
+            intops::iclip,
+        },
+        dav1d::{
+            headers::{Dav1dFilmGrainData, Rav1dFilmGrainData, Rav1dPixelLayoutSubSampled},
+            picture::{
+                FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponent,
+                Rav1dPictureDataComponentOffset,
+            },
+        },
+    },
+    internal::GrainLut,
+    strided::Strided as _,
+    tables::dav1d_gaussian_sequence,
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::include::common::intops::iclip;
-use crate::include::dav1d::headers::{
-    Dav1dFilmGrainData, Dav1dFilmGrainData, Rav1dFilmGrainData, Rav1dFilmGrainData,
-    Rav1dPixelLayoutSubSampled, Rav1dPixelLayoutSubSampled,
-};
-use crate::include::dav1d::picture::{
-    FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponent, Rav1dPictureDataComponent,
-    Rav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
-};
-use crate::internal::GrainLut;
-use crate::strided::Strided as _;
-use crate::tables::dav1d_gaussian_sequence;
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 pub const GRAIN_WIDTH: usize = 82;
 pub const GRAIN_HEIGHT: usize = 73;

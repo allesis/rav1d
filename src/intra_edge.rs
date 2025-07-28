@@ -2,9 +2,9 @@ use std::ops::Shr;
 
 use bitflags::bitflags;
 
-use crate::enum_map::DefaultValue;
-use crate::include::dav1d::headers::Rav1dPixelLayout;
-use crate::levels::BlockLevel;
+use crate::{
+    enum_map::DefaultValue, include::dav1d::headers::Rav1dPixelLayout, levels::BlockLevel,
+};
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]

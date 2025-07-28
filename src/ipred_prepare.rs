@@ -1,21 +1,24 @@
-use std::cmp;
-use std::ffi::c_int;
+use std::{cmp, ffi::c_int};
 
 use bitflags::bitflags;
 
-use crate::align::AlignedVec64;
-use crate::const_fn::const_for;
-use crate::disjoint_mut::DisjointMut;
-use crate::env::BlockContext;
-use crate::include::common::bitdepth::{AsPrimitive, BitDepth};
-use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
-use crate::intra_edge::EdgeFlags;
-use crate::levels::{
-    IntraPredMode, DC_128_PRED, DC_PRED, FILTER_PRED, HOR_PRED, LEFT_DC_PRED,
-    N_IMPL_INTRA_PRED_MODES, N_INTRA_PRED_MODES, PAETH_PRED, SMOOTH_H_PRED, SMOOTH_PRED,
-    SMOOTH_V_PRED, TOP_DC_PRED, VERT_LEFT_PRED, VERT_PRED, Z1_PRED, Z2_PRED, Z3_PRED,
+use crate::{
+    align::AlignedVec64,
+    const_fn::const_for,
+    disjoint_mut::DisjointMut,
+    env::BlockContext,
+    include::{
+        common::bitdepth::{AsPrimitive, BitDepth},
+        dav1d::picture::Rav1dPictureDataComponentOffset,
+    },
+    intra_edge::EdgeFlags,
+    levels::{
+        IntraPredMode, DC_128_PRED, DC_PRED, FILTER_PRED, HOR_PRED, LEFT_DC_PRED,
+        N_IMPL_INTRA_PRED_MODES, N_INTRA_PRED_MODES, PAETH_PRED, SMOOTH_H_PRED, SMOOTH_PRED,
+        SMOOTH_V_PRED, TOP_DC_PRED, VERT_LEFT_PRED, VERT_PRED, Z1_PRED, Z2_PRED, Z3_PRED,
+    },
+    strided::Strided as _,
 };
-use crate::strided::Strided as _;
 
 #[inline]
 pub fn sm_flag(b: &BlockContext, idx: usize) -> c_int {

@@ -1,21 +1,26 @@
 #![deny(unsafe_code)]
 
-use std::cmp;
-use std::ffi::c_int;
+use std::{cmp, ffi::c_int};
 
 use assert_matches::assert_matches;
 use bitflags::bitflags;
 use libc::ptrdiff_t;
 
-use crate::align::Align16;
-use crate::include::common::bitdepth::BitDepth;
-use crate::include::dav1d::headers::{Rav1dPixelLayout, Rav1dRestorationType};
-use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
-use crate::internal::{Rav1dContext, Rav1dFrameData};
-use crate::lf_mask::Av1RestorationUnit;
-use crate::looprestoration::{LooprestorationParams, LooprestorationParamsSgr, LrEdgeFlags};
-use crate::strided::Strided as _;
-use crate::tables::DAV1D_SGR_PARAMS;
+use crate::{
+    align::Align16,
+    include::{
+        common::bitdepth::BitDepth,
+        dav1d::{
+            headers::{Rav1dPixelLayout, Rav1dRestorationType},
+            picture::Rav1dPictureDataComponentOffset,
+        },
+    },
+    internal::{Rav1dContext, Rav1dFrameData},
+    lf_mask::Av1RestorationUnit,
+    looprestoration::{LooprestorationParams, LooprestorationParamsSgr, LrEdgeFlags},
+    strided::Strided as _,
+    tables::DAV1D_SGR_PARAMS,
+};
 
 bitflags! {
     #[derive(Clone, Copy, Default)]

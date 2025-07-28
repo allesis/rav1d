@@ -1,18 +1,26 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_uint};
-use std::{array, cmp};
+use std::{
+    array, cmp,
+    ffi::{c_int, c_uint},
+};
 
-use crate::align::{AlignedVec2, AlignedVec64};
-use crate::disjoint_mut::DisjointMut;
-use crate::include::common::bitdepth::BitDepth;
-use crate::include::dav1d::headers::{Rav1dFrameHeader, Rav1dPixelLayout};
-use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
-use crate::internal::{Rav1dBitDepthDSPContext, Rav1dContext, Rav1dFrameData};
-use crate::lr_apply::LrRestorePlanes;
-use crate::relaxed_atomic::RelaxedAtomic;
-use crate::strided::{Strided as _, WithStride};
-use crate::with_offset::WithOffset;
+use crate::{
+    align::{AlignedVec2, AlignedVec64},
+    disjoint_mut::DisjointMut,
+    include::{
+        common::bitdepth::BitDepth,
+        dav1d::{
+            headers::{Rav1dFrameHeader, Rav1dPixelLayout},
+            picture::Rav1dPictureDataComponentOffset,
+        },
+    },
+    internal::{Rav1dBitDepthDSPContext, Rav1dContext, Rav1dFrameData},
+    lr_apply::LrRestorePlanes,
+    relaxed_atomic::RelaxedAtomic,
+    strided::{Strided as _, WithStride},
+    with_offset::WithOffset,
+};
 
 /// The loop filter buffer stores 12 rows of pixels.
 /// A superblock block will contain at most 2 stripes.

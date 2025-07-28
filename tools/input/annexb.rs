@@ -1,17 +1,25 @@
-use std::cmp;
-use std::ffi::{c_char, c_int, c_uint, c_ulong, c_void};
-use std::ptr::NonNull;
+use std::{
+    cmp,
+    ffi::{c_char, c_int, c_uint, c_ulong, c_void},
+    ptr::NonNull,
+};
 
 use libc::{fclose, fopen, fprintf, fread, strerror};
-use rav1d::include::dav1d::data::Dav1dData;
-use rav1d::include::dav1d::headers::{
-    Dav1dObuType, DAV1D_OBU_FRAME, DAV1D_OBU_FRAME_HDR, DAV1D_OBU_SEQ_HDR, DAV1D_OBU_TD,
-    DAV1D_OBU_TILE_GRP,
+use rav1d::{
+    dav1d_data_create, dav1d_data_unref,
+    include::dav1d::{
+        data::Dav1dData,
+        headers::{
+            Dav1dObuType, DAV1D_OBU_FRAME, DAV1D_OBU_FRAME_HDR, DAV1D_OBU_SEQ_HDR, DAV1D_OBU_TD,
+            DAV1D_OBU_TILE_GRP,
+        },
+    },
 };
-use rav1d::{dav1d_data_create, dav1d_data_unref};
 
-use crate::compat::errno::errno_location;
-use crate::compat::stdio::{fseeko, stderr};
+use crate::compat::{
+    errno::errno_location,
+    stdio::{fseeko, stderr},
+};
 
 #[repr(C)]
 pub struct DemuxerPriv {

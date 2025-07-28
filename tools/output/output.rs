@@ -1,5 +1,8 @@
-use std::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
-use std::{cmp, mem};
+use std::{
+    cmp,
+    ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void},
+    mem,
+};
 
 use libc::{fprintf, free, malloc, memcpy, strchr, strcmp, strlen, strncmp, ENOMEM, ENOPROTOOPT};
 use rav1d::include::dav1d::picture::{Dav1dPicture, Dav1dPictureParameters};

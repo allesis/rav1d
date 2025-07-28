@@ -147,48 +147,61 @@ mod thread_task;
 mod warpmv;
 mod wedge;
 
-use std::collections::HashMap;
-use std::ffi::{c_char, c_uint, c_void, CStr};
-use std::ptr::NonNull;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::{Arc, Once};
-use std::{cmp, mem, ptr, slice, thread};
+use std::{
+    cmp,
+    collections::HashMap,
+    ffi::{c_char, c_uint, c_void, CStr},
+    mem, ptr,
+    ptr::NonNull,
+    slice,
+    sync::{
+        atomic::{AtomicBool, AtomicU32, Ordering},
+        Arc, Once,
+    },
+    thread,
+};
 
 use parking_lot::Mutex;
 use to_method::To as _;
 
-use crate::c_arc::RawArc;
-use crate::c_box::FnFree;
-use crate::cpu::{rav1d_init_cpu, rav1d_num_logical_processors};
-use crate::decode::rav1d_decode_frame_exit;
 pub use crate::error::Dav1dResult;
-use crate::error::{Rav1dError, Rav1dResult};
-use crate::extensions::OptionError as _;
-use crate::in_range::InRange;
 #[cfg(feature = "bitdepth_16")]
 use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
-use crate::include::common::validate::validate_input;
-use crate::include::dav1d::common::{Dav1dDataProps, Rav1dDataProps};
-use crate::include::dav1d::data::{Dav1dData, Rav1dData};
-use crate::include::dav1d::dav1d::{
-    Dav1dContext, Dav1dEventFlags, Dav1dSettings, Rav1dDecodeFrameType, Rav1dInloopFilterType,
-    Rav1dSettings,
+use crate::{
+    c_arc::RawArc,
+    c_box::FnFree,
+    cpu::{rav1d_init_cpu, rav1d_num_logical_processors},
+    decode::rav1d_decode_frame_exit,
+    error::{Rav1dError, Rav1dResult},
+    extensions::OptionError as _,
+    in_range::InRange,
+    include::{
+        common::validate::validate_input,
+        dav1d::{
+            common::{Dav1dDataProps, Rav1dDataProps},
+            data::{Dav1dData, Rav1dData},
+            dav1d::{
+                Dav1dContext, Dav1dEventFlags, Dav1dSettings, Rav1dDecodeFrameType,
+                Rav1dInloopFilterType, Rav1dSettings,
+            },
+            headers::{Dav1dSequenceHeader, Rav1dFilmGrainData},
+            picture::{Dav1dPicture, Rav1dPicture},
+        },
+    },
+    internal::{
+        Rav1dBitDepthDSPContext, Rav1dContext, Rav1dContextFrameThread, Rav1dContextTaskThread,
+        Rav1dContextTaskType, Rav1dFrameContext, Rav1dState, Rav1dTaskContext,
+        Rav1dTaskContextTaskThread, TaskThreadData,
+    },
+    iter::wrapping_iter,
+    log::{Rav1dLog as _, Rav1dLogger},
+    obu::{rav1d_parse_obus, rav1d_parse_sequence_header},
+    picture::{rav1d_picture_alloc_copy, PictureFlags},
+    send_sync_non_null::SendSyncNonNull,
+    thread_task::{rav1d_task_delayed_fg, rav1d_worker_task, FRAME_ERROR},
 };
-use crate::include::dav1d::headers::{Dav1dSequenceHeader, Rav1dFilmGrainData};
-use crate::include::dav1d::picture::{Dav1dPicture, Rav1dPicture};
-use crate::internal::{
-    Rav1dBitDepthDSPContext, Rav1dContext, Rav1dContextFrameThread, Rav1dContextTaskThread,
-    Rav1dContextTaskType, Rav1dFrameContext, Rav1dState, Rav1dTaskContext,
-    Rav1dTaskContextTaskThread, TaskThreadData,
-};
-use crate::iter::wrapping_iter;
-use crate::log::{Rav1dLog as _, Rav1dLogger};
-use crate::obu::{rav1d_parse_obus, rav1d_parse_sequence_header};
-use crate::picture::{rav1d_picture_alloc_copy, PictureFlags};
-use crate::send_sync_non_null::SendSyncNonNull;
-use crate::thread_task::{rav1d_task_delayed_fg, rav1d_worker_task, FRAME_ERROR};
 
 #[cold]
 fn init_internal() {

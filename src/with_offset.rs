@@ -1,8 +1,6 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use crate::include::common::bitdepth::BitDepth;
-use crate::pixels::Pixels;
-use crate::strided::Strided;
+use crate::{include::common::bitdepth::BitDepth, pixels::Pixels, strided::Strided};
 
 #[derive(Clone, Copy)]
 #[repr(C)]

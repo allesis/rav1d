@@ -1,15 +1,15 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_uint};
-use std::{cmp, slice};
+use std::{
+    cmp,
+    ffi::{c_int, c_uint},
+    slice,
+};
 
 use libc::ptrdiff_t;
 use strum::FromRepr;
-use zerocopy::{AsBytes, AsBytes, FromBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes};
 
-use crate::cpu::CpuFlags;
-use crate::enum_map::{enum_map, enum_map, enum_map_ty, enum_map_ty, DefaultValue, DefaultValue};
-use crate::ffi_safe::FFISafe;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
@@ -17,32 +17,32 @@ use crate::ffi_safe::FFISafe;
 use crate::include::common::bitdepth::bd_fn;
 #[cfg(all(feature = "asm", target_arch = "x86_64"))]
 use crate::include::common::bitdepth::bpc_fn;
-use crate::include::common::bitdepth::{
-    AsPrimitive, AsPrimitive, BitDepth, BitDepth, DynPixel, DynPixel, BPC, BPC,
+use crate::{
+    cpu::CpuFlags,
+    enum_map::{enum_map, enum_map_ty, DefaultValue},
+    ffi_safe::FFISafe,
+    include::{
+        common::{
+            bitdepth::{AsPrimitive, BitDepth, DynPixel, BPC},
+            intops::{apply_sign, iclip},
+        },
+        dav1d::{
+            headers::Rav1dPixelLayoutSubSampled,
+            picture::{FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset},
+        },
+    },
+    internal::{SCRATCH_AC_TXTP_LEN, SCRATCH_EDGE_LEN},
+    levels::{
+        DC_128_PRED, DC_PRED, FILTER_PRED, HOR_PRED, LEFT_DC_PRED, N_IMPL_INTRA_PRED_MODES,
+        PAETH_PRED, SMOOTH_H_PRED, SMOOTH_PRED, SMOOTH_V_PRED, TOP_DC_PRED, VERT_PRED, Z1_PRED,
+        Z2_PRED, Z3_PRED,
+    },
+    strided::Strided as _,
+    tables::{
+        dav1d_dr_intra_derivative, dav1d_filter_intra_taps, dav1d_sm_weights, filter_fn, FLT_INCR,
+    },
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::include::common::intops::{apply_sign, apply_sign, iclip, iclip};
-use crate::include::dav1d::headers::Rav1dPixelLayoutSubSampled;
-use crate::include::dav1d::picture::{
-    FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
-    Rav1dPictureDataComponentOffset,
-};
-use crate::internal::{
-    SCRATCH_AC_TXTP_LEN, SCRATCH_AC_TXTP_LEN, SCRATCH_EDGE_LEN, SCRATCH_EDGE_LEN,
-};
-use crate::levels::{
-    DC_128_PRED, DC_128_PRED, DC_PRED, DC_PRED, FILTER_PRED, FILTER_PRED, HOR_PRED, HOR_PRED,
-    LEFT_DC_PRED, LEFT_DC_PRED, N_IMPL_INTRA_PRED_MODES, N_IMPL_INTRA_PRED_MODES, PAETH_PRED,
-    PAETH_PRED, SMOOTH_H_PRED, SMOOTH_H_PRED, SMOOTH_PRED, SMOOTH_PRED, SMOOTH_V_PRED,
-    SMOOTH_V_PRED, TOP_DC_PRED, TOP_DC_PRED, VERT_PRED, VERT_PRED, Z1_PRED, Z1_PRED, Z2_PRED,
-    Z2_PRED, Z3_PRED, Z3_PRED,
-};
-use crate::strided::Strided as _;
-use crate::tables::{
-    dav1d_dr_intra_derivative, dav1d_dr_intra_derivative, dav1d_filter_intra_taps,
-    dav1d_filter_intra_taps, dav1d_sm_weights, dav1d_sm_weights, filter_fn, filter_fn, FLT_INCR,
-    FLT_INCR,
-};
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 wrap_fn_ptr!(pub unsafe extern "C" fn angular_ipred(
     dst_ptr: *mut DynPixel,

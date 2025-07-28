@@ -1,39 +1,50 @@
 #![deny(unsafe_code)]
 
-use std::ffi::{c_int, c_uint};
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::{array, cmp, fmt, mem};
-
-use crate::c_arc::CArc;
-use crate::decode::rav1d_submit_frame;
-use crate::env::get_poc_diff;
-use crate::error::{Rav1dError, Rav1dResult};
-use crate::getbits::GetBits;
-use crate::include::common::intops::{clip_u8, ulog2};
-use crate::include::dav1d::common::Rav1dDataProps;
-use crate::include::dav1d::data::Rav1dData;
-use crate::include::dav1d::dav1d::Rav1dDecodeFrameType;
-use crate::include::dav1d::headers::{
-    DRav1d, Dav1dSequenceHeader, Rav1dAdaptiveBoolean, Rav1dChromaSamplePosition,
-    Rav1dColorPrimaries, Rav1dContentLightLevel, Rav1dFilmGrainData, Rav1dFilterMode,
-    Rav1dFrameHeader, Rav1dFrameHeaderCdef, Rav1dFrameHeaderDelta, Rav1dFrameHeaderDeltaLF,
-    Rav1dFrameHeaderDeltaQ, Rav1dFrameHeaderFilmGrain, Rav1dFrameHeaderLoopFilter,
-    Rav1dFrameHeaderOperatingPoint, Rav1dFrameHeaderQuant, Rav1dFrameHeaderRestoration,
-    Rav1dFrameHeaderSegmentation, Rav1dFrameHeaderSuperRes, Rav1dFrameHeaderTiling, Rav1dFrameSize,
-    Rav1dFrameSkipMode, Rav1dFrameType, Rav1dITUTT35, Rav1dLoopfilterModeRefDeltas,
-    Rav1dMasteringDisplay, Rav1dMatrixCoefficients, Rav1dObuType, Rav1dPixelLayout, Rav1dProfile,
-    Rav1dRestorationType, Rav1dSegmentationData, Rav1dSegmentationDataSet, Rav1dSequenceHeader,
-    Rav1dSequenceHeaderOperatingParameterInfo, Rav1dSequenceHeaderOperatingPoint,
-    Rav1dTransferCharacteristics, Rav1dTxfmMode, Rav1dWarpedMotionParams, Rav1dWarpedMotionType,
-    RAV1D_MAX_CDEF_STRENGTHS, RAV1D_MAX_OPERATING_POINTS, RAV1D_MAX_TILE_COLS, RAV1D_MAX_TILE_ROWS,
-    RAV1D_PRIMARY_REF_NONE, RAV1D_REFS_PER_FRAME,
+use std::{
+    array, cmp,
+    ffi::{c_int, c_uint},
+    fmt, mem,
+    sync::{atomic::Ordering, Arc},
 };
-use crate::internal::{Rav1dContext, Rav1dState, Rav1dTileGroup, Rav1dTileGroupHeader};
-use crate::levels::ObuMetaType;
-use crate::log::Rav1dLog as _;
-use crate::picture::{rav1d_picture_copy_props, PictureFlags};
-use crate::thread_task::FRAME_ERROR;
+
+use crate::{
+    c_arc::CArc,
+    decode::rav1d_submit_frame,
+    env::get_poc_diff,
+    error::{Rav1dError, Rav1dResult},
+    getbits::GetBits,
+    include::{
+        common::intops::{clip_u8, ulog2},
+        dav1d::{
+            common::Rav1dDataProps,
+            data::Rav1dData,
+            dav1d::Rav1dDecodeFrameType,
+            headers::{
+                DRav1d, Dav1dSequenceHeader, Rav1dAdaptiveBoolean, Rav1dChromaSamplePosition,
+                Rav1dColorPrimaries, Rav1dContentLightLevel, Rav1dFilmGrainData, Rav1dFilterMode,
+                Rav1dFrameHeader, Rav1dFrameHeaderCdef, Rav1dFrameHeaderDelta,
+                Rav1dFrameHeaderDeltaLF, Rav1dFrameHeaderDeltaQ, Rav1dFrameHeaderFilmGrain,
+                Rav1dFrameHeaderLoopFilter, Rav1dFrameHeaderOperatingPoint, Rav1dFrameHeaderQuant,
+                Rav1dFrameHeaderRestoration, Rav1dFrameHeaderSegmentation,
+                Rav1dFrameHeaderSuperRes, Rav1dFrameHeaderTiling, Rav1dFrameSize,
+                Rav1dFrameSkipMode, Rav1dFrameType, Rav1dITUTT35, Rav1dLoopfilterModeRefDeltas,
+                Rav1dMasteringDisplay, Rav1dMatrixCoefficients, Rav1dObuType, Rav1dPixelLayout,
+                Rav1dProfile, Rav1dRestorationType, Rav1dSegmentationData,
+                Rav1dSegmentationDataSet, Rav1dSequenceHeader,
+                Rav1dSequenceHeaderOperatingParameterInfo, Rav1dSequenceHeaderOperatingPoint,
+                Rav1dTransferCharacteristics, Rav1dTxfmMode, Rav1dWarpedMotionParams,
+                Rav1dWarpedMotionType, RAV1D_MAX_CDEF_STRENGTHS, RAV1D_MAX_OPERATING_POINTS,
+                RAV1D_MAX_TILE_COLS, RAV1D_MAX_TILE_ROWS, RAV1D_PRIMARY_REF_NONE,
+                RAV1D_REFS_PER_FRAME,
+            },
+        },
+    },
+    internal::{Rav1dContext, Rav1dState, Rav1dTileGroup, Rav1dTileGroupHeader},
+    levels::ObuMetaType,
+    log::Rav1dLog as _,
+    picture::{rav1d_picture_copy_props, PictureFlags},
+    thread_task::FRAME_ERROR,
+};
 
 struct Debug {
     enabled: bool,

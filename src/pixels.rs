@@ -1,9 +1,10 @@
-use std::mem;
-use std::ops::Deref;
+use std::{mem, ops::Deref};
 
-use crate::disjoint_mut::{AsMutPtr, DisjointMut};
-use crate::include::common::bitdepth::BitDepth;
-use crate::strided::WithStride;
+use crate::{
+    disjoint_mut::{AsMutPtr, DisjointMut},
+    include::common::bitdepth::BitDepth,
+    strided::WithStride,
+};
 
 pub trait Pixels {
     /// Length in number of [`u8`] bytes.

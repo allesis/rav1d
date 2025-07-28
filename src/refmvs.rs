@@ -1,25 +1,25 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-use std::{cmp, mem, ptr, slice};
+use std::{cmp, marker::PhantomData, mem, mem::MaybeUninit, ptr, slice};
 
 use zerocopy::{AsBytes, FromZeroes};
 
-use crate::align::{Align16, AlignedVec64};
-use crate::cpu::CpuFlags;
-use crate::disjoint_mut::{DisjointMut, DisjointMutArcSlice, DisjointMutGuard, DisjointMutSlice};
-use crate::env::{fix_mv_precision, get_gmv_2d, get_poc_diff};
-use crate::error::Rav1dResult;
-use crate::ffi_safe::FFISafe;
-use crate::include::common::intops::{apply_sign, iclip};
-use crate::include::dav1d::headers::{
-    Rav1dFrameHeader, Rav1dSequenceHeader, Rav1dWarpedMotionType,
+use crate::{
+    align::{Align16, AlignedVec64},
+    cpu::CpuFlags,
+    disjoint_mut::{DisjointMut, DisjointMutArcSlice, DisjointMutGuard, DisjointMutSlice},
+    env::{fix_mv_precision, get_gmv_2d, get_poc_diff},
+    error::Rav1dResult,
+    ffi_safe::FFISafe,
+    include::{
+        common::intops::{apply_sign, iclip},
+        dav1d::headers::{Rav1dFrameHeader, Rav1dSequenceHeader, Rav1dWarpedMotionType},
+    },
+    internal::Bxy,
+    intra_edge::EdgeFlags,
+    levels::{BlockSize, Mv, UnalignedMv},
+    wrap_fn_ptr::wrap_fn_ptr,
 };
-use crate::internal::Bxy;
-use crate::intra_edge::EdgeFlags;
-use crate::levels::{BlockSize, Mv, UnalignedMv};
-use crate::wrap_fn_ptr::wrap_fn_ptr;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 #[repr(C, packed)]

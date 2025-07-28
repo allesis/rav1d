@@ -1,33 +1,39 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_int, c_void};
-use std::hint::assert_unchecked;
-use std::ptr::NonNull;
-use std::sync::Arc;
-use std::{array, mem};
+use std::{
+    array,
+    ffi::{c_int, c_void},
+    hint::assert_unchecked,
+    mem,
+    ptr::NonNull,
+    sync::Arc,
+};
 
 use libc::{ptrdiff_t, uintptr_t};
 use to_method::To as _;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::c_arc::RawArc;
-use crate::disjoint_mut::{
-    AsMutPtr, DisjointImmutGuard, DisjointMut, DisjointMutGuard, SliceBounds,
+use crate::{
+    c_arc::RawArc,
+    disjoint_mut::{AsMutPtr, DisjointImmutGuard, DisjointMut, DisjointMutGuard, SliceBounds},
+    error::{Dav1dResult, Rav1dError, Rav1dResult},
+    ffi_safe::FFISafe,
+    include::{
+        common::{bitdepth::BitDepth, validate::validate_input},
+        dav1d::{
+            common::{Dav1dDataProps, Rav1dDataProps},
+            headers::{
+                DRav1d, Dav1dFrameHeader, Dav1dITUTT35, Dav1dPixelLayout, Dav1dSequenceHeader,
+                Rav1dContentLightLevel, Rav1dFrameHeader, Rav1dITUTT35, Rav1dMasteringDisplay,
+                Rav1dPixelLayout, Rav1dSequenceHeader,
+            },
+        },
+    },
+    pixels::Pixels,
+    send_sync_non_null::SendSyncNonNull,
+    strided::Strided,
+    with_offset::WithOffset,
 };
-use crate::error::{Dav1dResult, Rav1dError, Rav1dResult};
-use crate::ffi_safe::FFISafe;
-use crate::include::common::bitdepth::BitDepth;
-use crate::include::common::validate::validate_input;
-use crate::include::dav1d::common::{Dav1dDataProps, Rav1dDataProps};
-use crate::include::dav1d::headers::{
-    DRav1d, Dav1dFrameHeader, Dav1dITUTT35, Dav1dPixelLayout, Dav1dSequenceHeader,
-    Rav1dContentLightLevel, Rav1dFrameHeader, Rav1dITUTT35, Rav1dMasteringDisplay,
-    Rav1dPixelLayout, Rav1dSequenceHeader,
-};
-use crate::pixels::Pixels;
-use crate::send_sync_non_null::SendSyncNonNull;
-use crate::strided::Strided;
-use crate::with_offset::WithOffset;
 
 // Number of bytes to align AND pad picture memory buffers by, so that SIMD
 // implementations can over-read by a few bytes, and use aligned read/write

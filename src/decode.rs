@@ -1,101 +1,102 @@
-use std::ffi::{c_int, c_uint};
-use std::sync::atomic::{AtomicI32, Ordering};
-use std::{array, cmp, iter, mem};
+use std::{
+    array, cmp,
+    ffi::{c_int, c_uint},
+    iter, mem,
+    sync::atomic::{AtomicI32, Ordering},
+};
 
 use libc::ptrdiff_t;
 use strum::EnumCount;
 
-use crate::align::{Align16, AlignedVec64};
-use crate::c_arc::CArc;
-use crate::cdf::{
-    rav1d_cdf_thread_alloc, rav1d_cdf_thread_copy, rav1d_cdf_thread_init_static,
-    rav1d_cdf_thread_update, CdfMvComponent, CdfThreadContext,
-};
-use crate::ctx::CaseSet;
-use crate::dequant_tables::DAV1D_DQ_TBL;
-use crate::disjoint_mut::{DisjointMut, DisjointMutSlice};
-use crate::enum_map::{enum_map, enum_map_ty, DefaultValue};
-use crate::env::{
-    av1_get_bwd_ref_1_ctx, av1_get_bwd_ref_ctx, av1_get_fwd_ref_1_ctx, av1_get_fwd_ref_2_ctx,
-    av1_get_fwd_ref_ctx, av1_get_ref_ctx, av1_get_uni_p1_ctx, fix_mv_precision,
-    gather_left_partition_prob, gather_top_partition_prob, get_comp_ctx, get_comp_dir_ctx,
-    get_cur_frame_segid, get_drl_context, get_filter_ctx, get_gmv_2d, get_intra_ctx,
-    get_jnt_comp_ctx, get_mask_comp_ctx, get_partition_ctx, get_poc_diff, get_tx_ctx, BlockContext,
-};
-use crate::error::Rav1dError::{EINVAL, ENOPROTOOPT};
-use crate::error::{Rav1dError, Rav1dResult};
-use crate::extensions::OptionError as _;
-use crate::include::common::attributes::ctz;
-use crate::include::common::bitdepth::BPC;
-use crate::include::common::intops::{apply_sign64, clip, clip_u8, iclip};
-use crate::include::dav1d::common::Rav1dDataProps;
-use crate::include::dav1d::headers::{
-    Rav1dFilterMode, Rav1dFrameHeader, Rav1dFrameHeaderTiling, Rav1dPixelLayout,
-    Rav1dRestorationType, Rav1dSequenceHeader, Rav1dTxfmMode, Rav1dWarpedMotionParams,
-    Rav1dWarpedMotionType, SgrIdx, RAV1D_PRIMARY_REF_NONE,
-};
-use crate::include::dav1d::picture::Rav1dPicture;
-use crate::internal::{
-    Bxy, Rav1dBitDepthDSPContext, Rav1dBitDepthDSPContext, Rav1dContext, Rav1dContext,
-    Rav1dContextTaskType, Rav1dContextTaskType, Rav1dFrameContext, Rav1dFrameContext,
-    Rav1dFrameContextFrameThread, Rav1dFrameContextLf, Rav1dFrameData, Rav1dState,
-    Rav1dTaskContext, Rav1dTileState, Rav1dTileStateContext, ScalableMotionParams, ScratchPal,
-    TileStateRef,
-};
-use crate::intra_edge::{EdgeFlags, EdgeIndex, IntraEdges};
-use crate::levels::{
-    Av1Block, Av1BlockInter, Av1BlockInter1d, Av1BlockInter2d, Av1BlockInterNd, Av1BlockIntra,
-    Av1BlockIntraInter, BlockLevel, BlockPartition, BlockSize, CompInterType, DrlProximity,
-    Filter2d, InterIntraPredMode, InterIntraType, MVJoint, MotionMode, Mv, SegmentId, TxfmSize,
-    CFL_PRED, DC_PRED, FILTER_PRED, GLOBALMV, GLOBALMV_GLOBALMV, NEARESTMV, NEARESTMV_NEARESTMV,
-    NEARMV, NEWMV, NEWMV_NEWMV, N_COMP_INTER_PRED_MODES, N_INTRA_PRED_MODES, N_UV_INTRA_PRED_MODES,
-    VERT_LEFT_PRED, VERT_PRED,
-};
-use crate::lf_mask::{
-    rav1d_calc_eih, rav1d_calc_lf_values, rav1d_create_lf_mask_inter, rav1d_create_lf_mask_intra,
-    Av1RestorationUnit,
-};
-use crate::log::Rav1dLog as _;
-use crate::lr_apply::LrRestorePlanes;
-use crate::msac::{
-    rav1d_msac_decode_bool, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_adapt,
-    rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bools,
-    rav1d_msac_decode_bools, rav1d_msac_decode_subexp, rav1d_msac_decode_subexp,
-    rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt16,
-    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt4,
-    rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_uniform,
-    rav1d_msac_decode_uniform, MsacContext,
-};
-use crate::pal::Rav1dPalDSPContext;
-use crate::picture::{
-    rav1d_picture_alloc_copy, rav1d_thread_picture_alloc, rav1d_thread_picture_alloc,
-    Rav1dThreadPicture,
-};
-use crate::qm::{dav1d_qm_tbl, DAV1D_QM_TBL};
-use crate::recon::debug_block_info;
-use crate::refmvs::{
-    rav1d_refmvs_find, rav1d_refmvs_init_frame, rav1d_refmvs_init_frame,
-    rav1d_refmvs_tile_sbrow_init, rav1d_refmvs_tile_sbrow_init, RefMvsBlock, RefMvsFrame,
-    RefMvsFrame, RefMvsMvPair, RefMvsMvPair, RefMvsRefPair, RefMvsRefPair,
-};
-use crate::relaxed_atomic::RelaxedAtomic;
-use crate::tables::{
-    cfl_allowed_mask, dav1d_al_part_ctx, dav1d_block_sizes, dav1d_comp_inter_pred_modes,
-    dav1d_filter_2d, dav1d_filter_dir, dav1d_intra_mode_context, dav1d_max_txfm_size_for_bs,
-    dav1d_partition_type_count, dav1d_sgr_params, dav1d_txfm_dimensions, dav1d_wedge_ctx_lut,
-    dav1d_ymode_size_context, interintra_allowed_mask, wedge_allowed_mask, CFL_ALLOWED_MASK,
-    DAV1D_AL_PART_CTX, DAV1D_BLOCK_SIZES, DAV1D_COMP_INTER_PRED_MODES, DAV1D_FILTER_2D,
-    DAV1D_FILTER_DIR, DAV1D_INTRA_MODE_CONTEXT, DAV1D_MAX_TXFM_SIZE_FOR_BS,
-    DAV1D_PARTITION_TYPE_COUNT, DAV1D_SGR_PARAMS, DAV1D_TXFM_DIMENSIONS, DAV1D_WEDGE_CTX_LUT,
-    DAV1D_YMODE_SIZE_CONTEXT, INTERINTRA_ALLOWED_MASK, WEDGE_ALLOWED_MASK,
-};
-use crate::thread_task::{
-    rav1d_task_create_tile_sbrow, rav1d_task_frame_init, rav1d_task_frame_init, FRAME_ERROR,
-    TILE_ERROR, TILE_ERROR,
-};
-use crate::warpmv::{
-    rav1d_find_affine_int, rav1d_get_shear_params, rav1d_get_shear_params, rav1d_set_affine_mv2d,
-    rav1d_set_affine_mv2d,
+use crate::{
+    align::{Align16, AlignedVec64},
+    c_arc::CArc,
+    cdf::{
+        rav1d_cdf_thread_alloc, rav1d_cdf_thread_copy, rav1d_cdf_thread_init_static,
+        rav1d_cdf_thread_update, CdfMvComponent, CdfThreadContext,
+    },
+    ctx::CaseSet,
+    dequant_tables::DAV1D_DQ_TBL,
+    disjoint_mut::{DisjointMut, DisjointMutSlice},
+    enum_map::{enum_map, enum_map_ty, DefaultValue},
+    env::{
+        av1_get_bwd_ref_1_ctx, av1_get_bwd_ref_ctx, av1_get_fwd_ref_1_ctx, av1_get_fwd_ref_2_ctx,
+        av1_get_fwd_ref_ctx, av1_get_ref_ctx, av1_get_uni_p1_ctx, fix_mv_precision,
+        gather_left_partition_prob, gather_top_partition_prob, get_comp_ctx, get_comp_dir_ctx,
+        get_cur_frame_segid, get_drl_context, get_filter_ctx, get_gmv_2d, get_intra_ctx,
+        get_jnt_comp_ctx, get_mask_comp_ctx, get_partition_ctx, get_poc_diff, get_tx_ctx,
+        BlockContext,
+    },
+    error::{
+        Rav1dError,
+        Rav1dError::{EINVAL, ENOPROTOOPT},
+        Rav1dResult,
+    },
+    extensions::OptionError as _,
+    include::{
+        common::{
+            attributes::ctz,
+            bitdepth::BPC,
+            intops::{apply_sign64, clip, clip_u8, iclip},
+        },
+        dav1d::{
+            common::Rav1dDataProps,
+            headers::{
+                Rav1dFilterMode, Rav1dFrameHeader, Rav1dFrameHeaderTiling, Rav1dPixelLayout,
+                Rav1dRestorationType, Rav1dSequenceHeader, Rav1dTxfmMode, Rav1dWarpedMotionParams,
+                Rav1dWarpedMotionType, SgrIdx, RAV1D_PRIMARY_REF_NONE,
+            },
+            picture::Rav1dPicture,
+        },
+    },
+    internal::{
+        Bxy, Rav1dBitDepthDSPContext, Rav1dContext, Rav1dContextTaskType, Rav1dFrameContext,
+        Rav1dFrameContextFrameThread, Rav1dFrameContextLf, Rav1dFrameData, Rav1dState,
+        Rav1dTaskContext, Rav1dTileState, Rav1dTileStateContext, ScalableMotionParams, ScratchPal,
+        TileStateRef,
+    },
+    intra_edge::{EdgeFlags, EdgeIndex, IntraEdges},
+    levels::{
+        Av1Block, Av1BlockInter, Av1BlockInter1d, Av1BlockInter2d, Av1BlockInterNd, Av1BlockIntra,
+        Av1BlockIntraInter, BlockLevel, BlockPartition, BlockSize, CompInterType, DrlProximity,
+        Filter2d, InterIntraPredMode, InterIntraType, MVJoint, MotionMode, Mv, SegmentId, TxfmSize,
+        CFL_PRED, DC_PRED, FILTER_PRED, GLOBALMV, GLOBALMV_GLOBALMV, NEARESTMV,
+        NEARESTMV_NEARESTMV, NEARMV, NEWMV, NEWMV_NEWMV, N_COMP_INTER_PRED_MODES,
+        N_INTRA_PRED_MODES, N_UV_INTRA_PRED_MODES, VERT_LEFT_PRED, VERT_PRED,
+    },
+    lf_mask::{
+        rav1d_calc_eih, rav1d_calc_lf_values, rav1d_create_lf_mask_inter,
+        rav1d_create_lf_mask_intra, Av1RestorationUnit,
+    },
+    log::Rav1dLog as _,
+    lr_apply::LrRestorePlanes,
+    msac::{
+        rav1d_msac_decode_bool, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi,
+        rav1d_msac_decode_bools, rav1d_msac_decode_subexp, rav1d_msac_decode_symbol_adapt16,
+        rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt8,
+        rav1d_msac_decode_uniform, MsacContext,
+    },
+    pal::Rav1dPalDSPContext,
+    picture::{rav1d_picture_alloc_copy, rav1d_thread_picture_alloc, Rav1dThreadPicture},
+    qm::{dav1d_qm_tbl, DAV1D_QM_TBL},
+    recon::debug_block_info,
+    refmvs::{
+        rav1d_refmvs_find, rav1d_refmvs_init_frame, rav1d_refmvs_tile_sbrow_init, RefMvsBlock,
+        RefMvsFrame, RefMvsMvPair, RefMvsRefPair,
+    },
+    relaxed_atomic::RelaxedAtomic,
+    tables::{
+        cfl_allowed_mask, dav1d_al_part_ctx, dav1d_block_sizes, dav1d_comp_inter_pred_modes,
+        dav1d_filter_2d, dav1d_filter_dir, dav1d_intra_mode_context, dav1d_max_txfm_size_for_bs,
+        dav1d_partition_type_count, dav1d_sgr_params, dav1d_txfm_dimensions, dav1d_wedge_ctx_lut,
+        dav1d_ymode_size_context, interintra_allowed_mask, wedge_allowed_mask, CFL_ALLOWED_MASK,
+        DAV1D_AL_PART_CTX, DAV1D_BLOCK_SIZES, DAV1D_COMP_INTER_PRED_MODES, DAV1D_FILTER_2D,
+        DAV1D_FILTER_DIR, DAV1D_INTRA_MODE_CONTEXT, DAV1D_MAX_TXFM_SIZE_FOR_BS,
+        DAV1D_PARTITION_TYPE_COUNT, DAV1D_SGR_PARAMS, DAV1D_TXFM_DIMENSIONS, DAV1D_WEDGE_CTX_LUT,
+        DAV1D_YMODE_SIZE_CONTEXT, INTERINTRA_ALLOWED_MASK, WEDGE_ALLOWED_MASK,
+    },
+    thread_task::{rav1d_task_create_tile_sbrow, rav1d_task_frame_init, FRAME_ERROR, TILE_ERROR},
+    warpmv::{rav1d_find_affine_int, rav1d_get_shear_params, rav1d_set_affine_mv2d},
 };
 
 fn init_quant_tables(

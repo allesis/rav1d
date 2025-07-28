@@ -1,17 +1,22 @@
 #![deny(unsafe_code)]
 
-use std::fmt::{Display, Formatter};
-use std::ops::Neg;
-use std::{fmt, mem};
+use std::{
+    fmt,
+    fmt::{Display, Formatter},
+    mem,
+    ops::Neg,
+};
 
 use bitflags::bitflags;
 use strum::{EnumCount, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::align::ArrayDefault;
-use crate::enum_map::{DefaultValue, EnumKey};
-use crate::in_range::InRange;
-use crate::include::dav1d::headers::Rav1dFilterMode;
+use crate::{
+    align::ArrayDefault,
+    enum_map::{DefaultValue, EnumKey},
+    in_range::InRange,
+    include::dav1d::headers::Rav1dFilterMode,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
 pub enum ObuMetaType {

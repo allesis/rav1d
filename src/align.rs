@@ -6,11 +6,14 @@
 //! [`Index`]/[`IndexMut`] (since it's usually array fields that require
 //! specific aligment for use with SIMD instructions).
 
-use std::hint::assert_unchecked;
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::{mem, slice};
+use std::{
+    hint::assert_unchecked,
+    marker::PhantomData,
+    mem,
+    mem::MaybeUninit,
+    ops::{Deref, DerefMut, Index, IndexMut},
+    slice,
+};
 
 use crate::disjoint_mut::AsMutPtr;
 
