@@ -4,8 +4,8 @@ use std::{
     mem,
     ops::{Deref, Range},
     sync::{
-        atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
         Arc, OnceLock,
+        atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
     },
     thread::JoinHandle,
 };
@@ -14,20 +14,19 @@ use atomig::{Atom, Atomic};
 use libc::ptrdiff_t;
 use parking_lot::{Condvar, Mutex, RwLock, RwLockReadGuard};
 use strum::FromRepr;
-use to_method::To;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::{
     align::{Align16, Align64, AlignedVec2, AlignedVec64},
     cdef::Rav1dCdefDSPContext,
     cdf::{CdfContext, CdfThreadContext},
-    cpu::{rav1d_get_cpu_flags, CpuFlags},
+    cpu::{CpuFlags, rav1d_get_cpu_flags},
     disjoint_mut::{DisjointImmutGuard, DisjointMut, DisjointMutArcSlice, DisjointMutGuard},
     env::BlockContext,
     error::Rav1dError,
-    filmgrain::{Rav1dFilmGrainDSPContext, GRAIN_HEIGHT, GRAIN_WIDTH},
+    filmgrain::{GRAIN_HEIGHT, GRAIN_WIDTH, Rav1dFilmGrainDSPContext},
     include::{
-        common::bitdepth::{BitDepth, BitDepth16, BitDepth8, BPC},
+        common::bitdepth::{BPC, BitDepth, BitDepth8, BitDepth16},
         dav1d::{
             common::Rav1dDataProps,
             data::Rav1dData,
@@ -54,12 +53,12 @@ use crate::{
     picture::{PictureFlags, Rav1dThreadPicture},
     pool::MemPool,
     recon::{
-        rav1d_backup_ipred_edge, rav1d_copy_pal_block_uv, rav1d_copy_pal_block_y,
-        rav1d_filter_sbrow, rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_deblock_cols,
-        rav1d_filter_sbrow_deblock_rows, rav1d_filter_sbrow_lr, rav1d_filter_sbrow_resize,
-        rav1d_read_coef_blocks, rav1d_read_pal_plane, rav1d_read_pal_uv, rav1d_recon_b_inter,
-        rav1d_recon_b_intra, BackupIpredEdgeFn, CopyPalBlockFn, FilterSbrowFn, ReadCoefBlocksFn,
-        ReadPalPlaneFn, ReadPalUVFn, ReconBInterFn, ReconBIntraFn,
+        BackupIpredEdgeFn, CopyPalBlockFn, FilterSbrowFn, ReadCoefBlocksFn, ReadPalPlaneFn,
+        ReadPalUVFn, ReconBInterFn, ReconBIntraFn, rav1d_backup_ipred_edge,
+        rav1d_copy_pal_block_uv, rav1d_copy_pal_block_y, rav1d_filter_sbrow,
+        rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_deblock_cols, rav1d_filter_sbrow_deblock_rows,
+        rav1d_filter_sbrow_lr, rav1d_filter_sbrow_resize, rav1d_read_coef_blocks,
+        rav1d_read_pal_plane, rav1d_read_pal_uv, rav1d_recon_b_inter, rav1d_recon_b_intra,
     },
     refmvs::{Rav1dRefmvsDSPContext, RefMvsFrame, RefMvsTemporalBlock, RefmvsTile},
     relaxed_atomic::RelaxedAtomic,
@@ -924,11 +923,6 @@ impl Cf {
 
     pub fn select_mut<BD: BitDepth>(&mut self) -> &mut [BD::Coef; CF_LEN] {
         FromBytes::mut_from_prefix(AsBytes::as_bytes_mut(&mut self.0)).unwrap()
-    }
-
-    pub fn into_vec_32<BD: BitDepth>(&mut self) -> Vec<i32> {
-        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
-        vec
     }
 }
 

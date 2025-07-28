@@ -2,12 +2,10 @@
 
 use std::{
     array, cmp,
-    collections::HashMap,
     ffi::{c_int, c_uint},
     hint::assert_unchecked,
     ops::BitOr,
     ptr,
-    sync::{Arc, Mutex},
 };
 
 use assert_matches::debug_assert_matches;
@@ -597,7 +595,7 @@ fn decode_coefs<BD: BitDepth>(
             f.debug_struct("Cf").field("coefs_i32", &values).finish()
         }
     }
-    let mut hashmap = f.hashmap.clone();
+    let hashmap = f.hashmap.clone();
     let dc_sign_ctx;
     let dc_sign;
     let mut dc_dq;
@@ -623,7 +621,7 @@ fn decode_coefs<BD: BitDepth>(
 
     let mut hash: u64 = 0;
     if marker {
-        for i in 0..64 {
+        for _ in 0..64 {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
             hash |= bit as u64;
