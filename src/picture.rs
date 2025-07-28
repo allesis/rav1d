@@ -3,8 +3,8 @@
 use std::{
     ffi::{c_int, c_void},
     mem, ptr,
-    ptr::{fn_addr_eq, NonNull},
-    sync::{atomic::AtomicU32, Arc},
+    ptr::{NonNull, fn_addr_eq},
+    sync::{Arc, atomic::AtomicU32},
 };
 
 use bitflags::bitflags;
@@ -12,7 +12,7 @@ use libc::ptrdiff_t;
 use to_method::To as _;
 
 use crate::{
-    error::{Dav1dResult, Rav1dError, Rav1dError::EGeneric, Rav1dResult},
+    error::{Dav1dResult, Rav1dError, Rav1dResult},
     include::dav1d::{
         common::Rav1dDataProps,
         dav1d::Rav1dEventFlags,
@@ -22,8 +22,8 @@ use crate::{
             Rav1dSequenceHeader,
         },
         picture::{
-            Dav1dPicture, Rav1dPicAllocator, Rav1dPicture, Rav1dPictureParameters,
-            RAV1D_PICTURE_ALIGNMENT,
+            Dav1dPicture, RAV1D_PICTURE_ALIGNMENT, Rav1dPicAllocator, Rav1dPicture,
+            Rav1dPictureParameters,
         },
     },
     internal::{Rav1dFrameContext, Rav1dFrameData},
