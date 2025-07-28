@@ -1,9 +1,9 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use crate::cpu::CpuFlags;
+use crate::enum_map::DefaultValue;
 use crate::enum_map::enum_map;
 use crate::enum_map::enum_map_ty;
-use crate::enum_map::DefaultValue;
 use crate::ffi_safe::FFISafe;
 use crate::include::common::bitdepth::AsPrimitive;
 use crate::include::common::bitdepth::BitDepth;

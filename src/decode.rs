@@ -4268,6 +4268,10 @@ pub(crate) fn rav1d_decode_tile_sbrow(
             root_bl,
             EdgeIndex::root(),
         )?;
+        if ts.context.try_lock().unwrap().msac.cnt <= -15 {
+            return Err(());
+        } else {
+        }
         if t.b.x & 16 != 0 || f.seq_hdr().sb128 != 0 {
             t.a += 1;
             t.lf_mask = t.lf_mask.map(|i| i + 1);
@@ -4323,6 +4327,8 @@ pub(crate) fn rav1d_decode_tile_sbrow(
         && (t.b.y >> f.sb_shift) + 1
             >= f.frame_hdr().tiling.row_start_sb[tile_row as usize + 1].into()
     {
+        //let mut msac = &mut ts.context.try_lock().unwrap().msac;
+        //return check_trailing_bits_after_symbol_coder(msac);
         return check_trailing_bits_after_symbol_coder(&ts.context.try_lock().unwrap().msac);
     }
     Ok(())
@@ -4755,7 +4761,6 @@ pub(crate) fn rav1d_decode_frame_init_cdf(
     Ok(())
 }
 
-use std::collections::HashMap;
 fn rav1d_decode_frame_main(c: &Rav1dContext, f: &mut Rav1dFrameData) -> Rav1dResult {
     assert!(c.tc.len() == 1);
 
@@ -4801,6 +4806,7 @@ fn rav1d_decode_frame_main(c: &Rav1dContext, f: &mut Rav1dFrameData) -> Rav1dRes
             }
             for col in 0..cols {
                 t.ts = tile_row * cols + col;
+                // Overread of msac.cnt occurs here
                 rav1d_decode_tile_sbrow(c, &mut t, f).map_err(|()| EINVAL)?;
             }
             if f.frame_hdr().frame_type.is_inter_or_switch() {
@@ -4963,6 +4969,7 @@ pub fn rav1d_submit_frame(c: &Rav1dContext, state: &mut Rav1dState) -> Rav1dResu
         }
         let error = &mut *fc.task_thread.retval.try_lock().unwrap();
         if error.is_some() {
+            // Error occurs here after decode_coefs returns
             state.cached_error = mem::take(&mut *error);
             state.cached_error_props = out_delayed.p.m.clone();
             let _ = mem::take(out_delayed);

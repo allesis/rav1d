@@ -1,5 +1,5 @@
-use crate::align::Align16;
 use crate::align::Align8;
+use crate::align::Align16;
 use crate::align::ArrayDefault;
 use crate::include::common::intops::clip;
 use std::ffi::c_int;

@@ -15,6 +15,12 @@ use crate::include::dav1d::data::Rav1dData;
 use crate::include::dav1d::dav1d::Rav1dDecodeFrameType;
 use crate::include::dav1d::headers::DRav1d;
 use crate::include::dav1d::headers::Dav1dSequenceHeader;
+use crate::include::dav1d::headers::RAV1D_MAX_CDEF_STRENGTHS;
+use crate::include::dav1d::headers::RAV1D_MAX_OPERATING_POINTS;
+use crate::include::dav1d::headers::RAV1D_MAX_TILE_COLS;
+use crate::include::dav1d::headers::RAV1D_MAX_TILE_ROWS;
+use crate::include::dav1d::headers::RAV1D_PRIMARY_REF_NONE;
+use crate::include::dav1d::headers::RAV1D_REFS_PER_FRAME;
 use crate::include::dav1d::headers::Rav1dAdaptiveBoolean;
 use crate::include::dav1d::headers::Rav1dChromaSamplePosition;
 use crate::include::dav1d::headers::Rav1dColorPrimaries;
@@ -54,20 +60,14 @@ use crate::include::dav1d::headers::Rav1dTransferCharacteristics;
 use crate::include::dav1d::headers::Rav1dTxfmMode;
 use crate::include::dav1d::headers::Rav1dWarpedMotionParams;
 use crate::include::dav1d::headers::Rav1dWarpedMotionType;
-use crate::include::dav1d::headers::RAV1D_MAX_CDEF_STRENGTHS;
-use crate::include::dav1d::headers::RAV1D_MAX_OPERATING_POINTS;
-use crate::include::dav1d::headers::RAV1D_MAX_TILE_COLS;
-use crate::include::dav1d::headers::RAV1D_MAX_TILE_ROWS;
-use crate::include::dav1d::headers::RAV1D_PRIMARY_REF_NONE;
-use crate::include::dav1d::headers::RAV1D_REFS_PER_FRAME;
 use crate::internal::Rav1dContext;
 use crate::internal::Rav1dState;
 use crate::internal::Rav1dTileGroup;
 use crate::internal::Rav1dTileGroupHeader;
 use crate::levels::ObuMetaType;
 use crate::log::Rav1dLog as _;
-use crate::picture::rav1d_picture_copy_props;
 use crate::picture::PictureFlags;
+use crate::picture::rav1d_picture_copy_props;
 use crate::thread_task::FRAME_ERROR;
 use std::array;
 use std::cmp;
@@ -75,8 +75,8 @@ use std::ffi::c_int;
 use std::ffi::c_uint;
 use std::fmt;
 use std::mem;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 struct Debug {
     enabled: bool,
@@ -153,7 +153,7 @@ fn parse_seq_hdr(
     gb: &mut GetBits,
     strict_std_compliance: bool,
 ) -> Rav1dResult<Rav1dSequenceHeader> {
-    let debug = Debug::new(false, "SEQHDR", gb);
+    let debug = Debug::new(true, "SEQHDR", gb);
 
     let profile = Rav1dProfile::from_repr(gb.get_bits(3) as usize).ok_or(EINVAL)?;
     debug.post(gb, "post-profile");
@@ -1391,9 +1391,11 @@ fn parse_restoration(
         };
 
         unit_size = match r#type {
-            [Rav1dRestorationType::None, Rav1dRestorationType::None, Rav1dRestorationType::None] => {
-                [8, 0]
-            }
+            [
+                Rav1dRestorationType::None,
+                Rav1dRestorationType::None,
+                Rav1dRestorationType::None,
+            ] => [8, 0],
             _ => {
                 // Log2 of the restoration unit size.
                 let mut unit_size_0 = 6 + seqhdr.sb128;
@@ -1775,7 +1777,7 @@ fn parse_frame_hdr(
     spatial_id: u8,
     gb: &mut GetBits,
 ) -> Rav1dResult<Rav1dFrameHeader> {
-    let debug = Debug::new(false, "HDR", gb);
+    let debug = Debug::new(true, "HDR", gb);
 
     debug.post(gb, "show_existing_frame");
     let show_existing_frame = (seqhdr.reduced_still_picture_header == 0 && gb.get_bit()) as u8;
@@ -2363,7 +2365,7 @@ fn parse_obus(
             parse_tile_grp(state, r#in, props, gb)?;
         }
         Some(Rav1dObuType::Metadata) => {
-            let debug = Debug::new(false, "OBU", &gb);
+            let debug = Debug::new(true, "OBU", &gb);
 
             // obu metadata type field
             let meta_type = gb.get_uleb128();

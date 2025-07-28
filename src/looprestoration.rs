@@ -6,11 +6,11 @@ use crate::cursor::CursorMut;
 use crate::disjoint_mut::DisjointMut;
 use crate::ffi_safe::FFISafe;
 use crate::include::common::bitdepth::AsPrimitive;
+use crate::include::common::bitdepth::BPC;
 use crate::include::common::bitdepth::BitDepth;
 use crate::include::common::bitdepth::DynPixel;
 use crate::include::common::bitdepth::LeftPixelRow;
 use crate::include::common::bitdepth::ToPrimitive;
-use crate::include::common::bitdepth::BPC;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
 use crate::strided::Strided as _;
@@ -52,11 +52,7 @@ bitflags! {
 
 impl LrEdgeFlags {
     pub const fn select(&self, select: bool) -> Self {
-        if select {
-            *self
-        } else {
-            Self::empty()
-        }
+        if select { *self } else { Self::empty() }
     }
 }
 

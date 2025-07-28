@@ -9,10 +9,10 @@ use crate::error::Rav1dResult;
 use crate::fg_apply::rav1d_apply_grain_row;
 use crate::fg_apply::rav1d_prep_grain;
 use crate::filmgrain::FG_BLOCK_SIZE;
-#[cfg(feature = "bitdepth_16")]
-use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
+#[cfg(feature = "bitdepth_16")]
+use crate::include::common::bitdepth::BitDepth16;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::headers::Rav1dPixelLayout;
 use crate::include::dav1d::picture::Rav1dPicture;
@@ -44,10 +44,10 @@ use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Deref;
 use std::process::abort;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 
 pub const FRAME_ERROR: u32 = u32::MAX - 1;
@@ -839,6 +839,9 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         // pending Q, so maybe return the tasks, set init_done,
                         // and add to pending Q only then.
                         let in_cdf = fc.in_cdf();
+                        // This progress value being set will cause an error to propagate and the
+                        // program to eventually exit
+                        // This is bad
                         let p1 = (if let Some(progress) = in_cdf.progress() {
                             progress.load(Ordering::SeqCst)
                         } else {
@@ -973,7 +976,6 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
         // remove t from list
         let Some(mut t) = fc.task_thread.tasks.remove(t_idx, prev_t) else {
             // Another thread already consumed the task
-            eprintln!("Task {t_idx:?} already consumed");
             continue 'outer;
         };
         if t.type_0 > TaskType::InitCdf
@@ -1044,6 +1046,7 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                             );
                         }
                         drop(f);
+                        // Errors is res is not OK
                         if res_0.is_ok() {
                             if !(c.fc.len() > 1) {
                                 unreachable!();
@@ -1125,6 +1128,7 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                         }
                         let progress = if error_0 != 0 { TILE_ERROR } else { 1 + sby };
 
+                        // ERROR_0 SET
                         // signal progress
                         fc.task_thread.error.fetch_or(error_0, Ordering::SeqCst);
                         if (sby + 1) << f.sb_shift < ts.tiling.row_end {
@@ -1148,6 +1152,7 @@ pub fn rav1d_worker_task(task_thread: Arc<Rav1dTaskContextTaskThread>) {
                             task_thread_lock = Some(ttd.lock.lock());
                             ts.progress[p_1 as usize].store(progress, Ordering::SeqCst);
                             reset_task_cur(c, ttd, t.frame_idx);
+                            // ERROR_0 SET
                             error_0 = fc.task_thread.error.load(Ordering::SeqCst);
                             let frame_hdr = &***f.frame_hdr.as_ref().unwrap();
                             if frame_hdr.refresh_context != 0

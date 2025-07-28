@@ -9,24 +9,22 @@ use crate::include::common::bitdepth::DynCoef;
 use crate::include::common::bitdepth::DynPixel;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
-use crate::itx_1d::rav1d_inv_adst16_1d_c;
 use crate::itx_1d::rav1d_inv_adst4_1d_c;
 use crate::itx_1d::rav1d_inv_adst8_1d_c;
+use crate::itx_1d::rav1d_inv_adst16_1d_c;
+use crate::itx_1d::rav1d_inv_dct4_1d_c;
+use crate::itx_1d::rav1d_inv_dct8_1d_c;
 use crate::itx_1d::rav1d_inv_dct16_1d_c;
 use crate::itx_1d::rav1d_inv_dct32_1d_c;
-use crate::itx_1d::rav1d_inv_dct4_1d_c;
 use crate::itx_1d::rav1d_inv_dct64_1d_c;
-use crate::itx_1d::rav1d_inv_dct8_1d_c;
-use crate::itx_1d::rav1d_inv_flipadst16_1d_c;
 use crate::itx_1d::rav1d_inv_flipadst4_1d_c;
 use crate::itx_1d::rav1d_inv_flipadst8_1d_c;
-use crate::itx_1d::rav1d_inv_identity16_1d_c;
-use crate::itx_1d::rav1d_inv_identity32_1d_c;
+use crate::itx_1d::rav1d_inv_flipadst16_1d_c;
 use crate::itx_1d::rav1d_inv_identity4_1d_c;
 use crate::itx_1d::rav1d_inv_identity8_1d_c;
+use crate::itx_1d::rav1d_inv_identity16_1d_c;
+use crate::itx_1d::rav1d_inv_identity32_1d_c;
 use crate::itx_1d::rav1d_inv_wht4_1d_c;
-use crate::levels::TxfmSize;
-use crate::levels::TxfmType;
 use crate::levels::ADST_ADST;
 use crate::levels::ADST_DCT;
 use crate::levels::ADST_FLIPADST;
@@ -41,6 +39,8 @@ use crate::levels::H_DCT;
 use crate::levels::H_FLIPADST;
 use crate::levels::IDTX;
 use crate::levels::N_TX_TYPES_PLUS_LL;
+use crate::levels::TxfmSize;
+use crate::levels::TxfmType;
 use crate::levels::V_ADST;
 use crate::levels::V_DCT;
 use crate::levels::V_FLIPADST;
@@ -389,9 +389,7 @@ macro_rules! assign_itx1_bpc_fn {
 
 #[cfg(all(feature = "asm", any(target_arch = "arm", target_arch = "aarch64")))]
 macro_rules! assign_itx1_fn {
-    ($c:ident, $BD:ty, $w:literal, $h:literal, $ext:ident) => {{
-        assign_itx_fn!($c, BD, $w, $h, dct_dct, DCT_DCT, $ext)
-    }};
+    ($c:ident, $BD:ty, $w:literal, $h:literal, $ext:ident) => {{ assign_itx_fn!($c, BD, $w, $h, dct_dct, DCT_DCT, $ext) }};
 }
 
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
