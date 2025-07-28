@@ -11,7 +11,7 @@ use crate::include::common::bitdepth::{AsPrimitive, BitDepth};
 use crate::include::dav1d::picture::Rav1dPictureDataComponentOffset;
 use crate::intra_edge::EdgeFlags;
 use crate::levels::{
-    DC_128_PRED, DC_PRED, FILTER_PRED, HOR_PRED, IntraPredMode, LEFT_DC_PRED,
+    IntraPredMode, DC_128_PRED, DC_PRED, FILTER_PRED, HOR_PRED, LEFT_DC_PRED,
     N_IMPL_INTRA_PRED_MODES, N_INTRA_PRED_MODES, PAETH_PRED, SMOOTH_H_PRED, SMOOTH_PRED,
     SMOOTH_V_PRED, TOP_DC_PRED, VERT_LEFT_PRED, VERT_PRED, Z1_PRED, Z2_PRED, Z3_PRED,
 };

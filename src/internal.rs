@@ -1,42 +1,39 @@
 use std::collections::HashMap;
-use std::ffi::{c_int, c_int, c_uint, c_uint, c_uint};
+use std::ffi::{c_int, c_uint, c_uint, c_uint};
 use std::mem;
-use std::ops::{Deref, Deref, Range, Range, Range};
+use std::ops::{Deref, Range, Range, Range};
 use std::sync::atomic::{
-    AtomicBool, AtomicBool, AtomicI32, AtomicI32, AtomicI32, AtomicU32, AtomicU32, AtomicU32,
-    Ordering, Ordering, Ordering,
+    AtomicBool, AtomicI32, AtomicI32, AtomicI32, AtomicU32, AtomicU32, AtomicU32, Ordering,
+    Ordering, Ordering,
 };
-use std::sync::{Arc, Arc, OnceLock, OnceLock, OnceLock};
+use std::sync::{Arc, OnceLock, OnceLock, OnceLock};
 use std::thread::JoinHandle;
 
-use atomig::{Atom, Atom, Atomic, Atomic, Atomic};
+use atomig::{Atom, Atomic, Atomic, Atomic};
 use libc::ptrdiff_t;
 use parking_lot::{
-    Condvar, Condvar, Mutex, Mutex, Mutex, RwLock, RwLock, RwLock, RwLockReadGuard,
-    RwLockReadGuard, RwLockReadGuard,
+    Condvar, Mutex, Mutex, Mutex, RwLock, RwLock, RwLock, RwLockReadGuard, RwLockReadGuard,
+    RwLockReadGuard,
 };
 use strum::FromRepr;
 use to_method::To;
-use zerocopy::{
-    AsBytes, AsBytes, FromBytes, FromBytes, FromBytes, FromZeroes, FromZeroes, FromZeroes,
-};
+use zerocopy::{AsBytes, FromBytes, FromBytes, FromBytes, FromZeroes, FromZeroes, FromZeroes};
 
 use crate::align::{Align16, Align64, AlignedVec2, AlignedVec64};
 use crate::cdef::Rav1dCdefDSPContext;
-use crate::cdf::{CdfContext, CdfContext, CdfThreadContext, CdfThreadContext};
-use crate::cpu::{CpuFlags, CpuFlags, rav1d_get_cpu_flags, rav1d_get_cpu_flags};
+use crate::cdf::{CdfContext, CdfThreadContext, CdfThreadContext};
+use crate::cpu::{rav1d_get_cpu_flags, CpuFlags, CpuFlags};
 use crate::disjoint_mut::{
-    DisjointImmutGuard, DisjointImmutGuard, DisjointMut, DisjointMut, DisjointMutArcSlice,
-    DisjointMutArcSlice, DisjointMutGuard, DisjointMutGuard,
+    DisjointImmutGuard, DisjointMut, DisjointMut, DisjointMutArcSlice, DisjointMutArcSlice,
+    DisjointMutGuard, DisjointMutGuard,
 };
 use crate::env::BlockContext;
 use crate::error::Rav1dError;
 use crate::filmgrain::{
-    GRAIN_HEIGHT, GRAIN_HEIGHT, GRAIN_WIDTH, GRAIN_WIDTH, Rav1dFilmGrainDSPContext,
-    Rav1dFilmGrainDSPContext,
+    Rav1dFilmGrainDSPContext, GRAIN_HEIGHT, GRAIN_HEIGHT, GRAIN_WIDTH, GRAIN_WIDTH,
 };
 use crate::include::common::bitdepth::{
-    BPC, BPC, BitDepth, BitDepth, BitDepth8, BitDepth8, BitDepth16, BitDepth16,
+    BitDepth, BitDepth16, BitDepth16, BitDepth8, BitDepth8, BPC, BPC,
 };
 use crate::include::dav1d::common::Rav1dDataProps;
 use crate::include::dav1d::data::Rav1dData;
@@ -60,25 +57,25 @@ use crate::pal::Rav1dPalDSPContext;
 use crate::picture::{PictureFlags, Rav1dThreadPicture};
 use crate::pool::MemPool;
 use crate::recon::{
-    BackupIpredEdgeFn, BackupIpredEdgeFn, CopyPalBlockFn, CopyPalBlockFn, FilterSbrowFn,
-    FilterSbrowFn, ReadCoefBlocksFn, ReadCoefBlocksFn, ReadPalPlaneFn, ReadPalPlaneFn, ReadPalUVFn,
-    ReadPalUVFn, ReconBInterFn, ReconBInterFn, ReconBIntraFn, ReconBIntraFn,
-    rav1d_backup_ipred_edge, rav1d_backup_ipred_edge, rav1d_copy_pal_block_uv,
-    rav1d_copy_pal_block_uv, rav1d_copy_pal_block_y, rav1d_copy_pal_block_y, rav1d_filter_sbrow,
-    rav1d_filter_sbrow, rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_cdef,
-    rav1d_filter_sbrow_deblock_cols, rav1d_filter_sbrow_deblock_cols,
-    rav1d_filter_sbrow_deblock_rows, rav1d_filter_sbrow_deblock_rows, rav1d_filter_sbrow_lr,
-    rav1d_filter_sbrow_lr, rav1d_filter_sbrow_resize, rav1d_filter_sbrow_resize,
-    rav1d_read_coef_blocks, rav1d_read_coef_blocks, rav1d_read_pal_plane, rav1d_read_pal_plane,
-    rav1d_read_pal_uv, rav1d_read_pal_uv, rav1d_recon_b_inter, rav1d_recon_b_inter,
-    rav1d_recon_b_intra, rav1d_recon_b_intra,
+    rav1d_backup_ipred_edge, rav1d_copy_pal_block_uv, rav1d_copy_pal_block_uv,
+    rav1d_copy_pal_block_y, rav1d_copy_pal_block_y, rav1d_filter_sbrow, rav1d_filter_sbrow,
+    rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_deblock_cols,
+    rav1d_filter_sbrow_deblock_cols, rav1d_filter_sbrow_deblock_rows,
+    rav1d_filter_sbrow_deblock_rows, rav1d_filter_sbrow_lr, rav1d_filter_sbrow_lr,
+    rav1d_filter_sbrow_resize, rav1d_filter_sbrow_resize, rav1d_read_coef_blocks,
+    rav1d_read_coef_blocks, rav1d_read_pal_plane, rav1d_read_pal_plane, rav1d_read_pal_uv,
+    rav1d_read_pal_uv, rav1d_recon_b_inter, rav1d_recon_b_inter, rav1d_recon_b_intra,
+    rav1d_recon_b_intra, BackupIpredEdgeFn, BackupIpredEdgeFn, CopyPalBlockFn, CopyPalBlockFn,
+    FilterSbrowFn, FilterSbrowFn, ReadCoefBlocksFn, ReadCoefBlocksFn, ReadPalPlaneFn,
+    ReadPalPlaneFn, ReadPalUVFn, ReadPalUVFn, ReconBInterFn, ReconBInterFn, ReconBIntraFn,
+    ReconBIntraFn,
 };
 use crate::refmvs::{
-    Rav1dRefmvsDSPContext, Rav1dRefmvsDSPContext, RefMvsFrame, RefMvsFrame, RefMvsTemporalBlock,
-    RefMvsTemporalBlock, RefmvsTile, RefmvsTile,
+    Rav1dRefmvsDSPContext, RefMvsFrame, RefMvsFrame, RefMvsTemporalBlock, RefMvsTemporalBlock,
+    RefmvsTile, RefmvsTile,
 };
 use crate::relaxed_atomic::RelaxedAtomic;
-use crate::thread_task::{Rav1dTaskIndex, Rav1dTaskIndex, Rav1dTasks, Rav1dTasks, Rav1dTasks};
+use crate::thread_task::{Rav1dTaskIndex, Rav1dTasks, Rav1dTasks, Rav1dTasks};
 
 #[derive(Default)]
 pub struct Rav1dDSPContext {

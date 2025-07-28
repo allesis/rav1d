@@ -1,13 +1,15 @@
-use std::ffi::{c_int, c_uint};
+use std::ffi::{c_int, c_int, c_uint, c_uint};
 use std::num::NonZeroU32;
-use std::ops::{Add, AddAssign, Deref};
+use std::ops::{Add, Add, AddAssign, AddAssign, Deref, Deref};
 use std::process::abort;
+use std::sync::atomic::{AtomicBool, AtomicBool, AtomicI32, AtomicI32, Ordering, Ordering};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
-use std::{cmp, mem, thread};
+use std::{cmp, cmp, mem, mem, thread, thread};
 
-use atomig::{Atom, Atomic};
-use parking_lot::{Mutex, MutexGuard, RwLock, RwLockReadGuard};
+use atomig::{Atom, Atom, Atomic, Atomic};
+use parking_lot::{
+    Mutex, Mutex, MutexGuard, MutexGuard, RwLock, RwLock, RwLockReadGuard, RwLockReadGuard,
+};
 
 use crate::cdf::rav1d_cdf_thread_update;
 use crate::decode::{
@@ -17,10 +19,10 @@ use crate::decode::{
 use crate::error::{Rav1dError, Rav1dResult};
 use crate::fg_apply::{rav1d_apply_grain_row, rav1d_prep_grain};
 use crate::filmgrain::FG_BLOCK_SIZE;
-#[cfg(feature = "bitdepth_8")]
-use crate::include::common::bitdepth::BitDepth8;
 #[cfg(feature = "bitdepth_16")]
 use crate::include::common::bitdepth::BitDepth16;
+#[cfg(feature = "bitdepth_8")]
+use crate::include::common::bitdepth::BitDepth8;
 use crate::include::common::intops::iclip;
 use crate::include::dav1d::headers::Rav1dPixelLayout;
 use crate::include::dav1d::picture::Rav1dPicture;
@@ -31,26 +33,6 @@ use crate::internal::{
 };
 use crate::iter::wrapping_iter;
 use crate::relaxed_atomic::RelaxedAtomic;
-use atomig::Atom;
-use atomig::Atomic;
-use parking_lot::Mutex;
-use parking_lot::MutexGuard;
-use parking_lot::RwLock;
-use parking_lot::RwLockReadGuard;
-use std::cmp;
-use std::ffi::c_int;
-use std::ffi::c_uint;
-use std::mem;
-use std::num::NonZeroU32;
-use std::ops::Add;
-use std::ops::AddAssign;
-use std::ops::Deref;
-use std::process::abort;
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicI32;
-use std::sync::atomic::Ordering;
-use std::thread;
 
 pub const FRAME_ERROR: u32 = u32::MAX - 1;
 pub const TILE_ERROR: i32 = i32::MAX - 1;

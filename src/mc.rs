@@ -7,10 +7,8 @@ use to_method::To;
 
 use crate::align::AlignedVec64;
 use crate::cpu::CpuFlags;
-use crate::enum_map::{DefaultValue, enum_map, enum_map_ty};
+use crate::enum_map::{enum_map, enum_map_ty, DefaultValue};
 use crate::ffi_safe::FFISafe;
-#[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
-use crate::include::common::bitdepth::BPC;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
@@ -21,6 +19,8 @@ use crate::include::common::bitdepth::bd_fn;
     any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")
 ))]
 use crate::include::common::bitdepth::bpc_fn;
+#[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
+use crate::include::common::bitdepth::BPC;
 use crate::include::common::bitdepth::{AsPrimitive, BitDepth, DynPixel};
 use crate::include::common::intops::{clip, iclip};
 use crate::include::dav1d::headers::{Rav1dFilterMode, Rav1dPixelLayoutSubSampled};

@@ -148,7 +148,7 @@ mod warpmv;
 mod wedge;
 
 use std::collections::HashMap;
-use std::ffi::{CStr, c_char, c_uint, c_void};
+use std::ffi::{c_char, c_uint, c_void, CStr};
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Once};
@@ -165,10 +165,10 @@ pub use crate::error::Dav1dResult;
 use crate::error::{Rav1dError, Rav1dResult};
 use crate::extensions::OptionError as _;
 use crate::in_range::InRange;
-#[cfg(feature = "bitdepth_8")]
-use crate::include::common::bitdepth::BitDepth8;
 #[cfg(feature = "bitdepth_16")]
 use crate::include::common::bitdepth::BitDepth16;
+#[cfg(feature = "bitdepth_8")]
+use crate::include::common::bitdepth::BitDepth8;
 use crate::include::common::validate::validate_input;
 use crate::include::dav1d::common::{Dav1dDataProps, Rav1dDataProps};
 use crate::include::dav1d::data::{Dav1dData, Rav1dData};
@@ -186,9 +186,9 @@ use crate::internal::{
 use crate::iter::wrapping_iter;
 use crate::log::{Rav1dLog as _, Rav1dLogger};
 use crate::obu::{rav1d_parse_obus, rav1d_parse_sequence_header};
-use crate::picture::{PictureFlags, rav1d_picture_alloc_copy};
+use crate::picture::{rav1d_picture_alloc_copy, PictureFlags};
 use crate::send_sync_non_null::SendSyncNonNull;
-use crate::thread_task::{FRAME_ERROR, rav1d_task_delayed_fg, rav1d_worker_task};
+use crate::thread_task::{rav1d_task_delayed_fg, rav1d_worker_task, FRAME_ERROR};
 
 #[cold]
 fn init_internal() {

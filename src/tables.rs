@@ -1,84 +1,33 @@
-use crate::align::Align4;
-use crate::align::Align8;
-use crate::align::Align16;
-use crate::align::Align64;
-use crate::enum_map::DefaultValue;
-use crate::include::dav1d::headers::Rav1dFilterMode;
-use crate::include::dav1d::headers::Rav1dWarpedMotionParams;
-use crate::include::dav1d::headers::Rav1dWarpedMotionType;
-use crate::levels::ADST_ADST;
-use crate::levels::ADST_DCT;
-use crate::levels::ADST_FLIPADST;
-use crate::levels::BlockLevel;
-use crate::levels::BlockPartition;
-use crate::levels::BlockSize;
-use crate::levels::DC_PRED;
-use crate::levels::DCT_ADST;
-use crate::levels::DCT_DCT;
-use crate::levels::DCT_FLIPADST;
-use crate::levels::DIAG_DOWN_LEFT_PRED;
-use crate::levels::DIAG_DOWN_RIGHT_PRED;
-use crate::levels::FLIPADST_ADST;
-use crate::levels::FLIPADST_DCT;
-use crate::levels::FLIPADST_FLIPADST;
-use crate::levels::Filter2d;
-use crate::levels::GLOBALMV;
-use crate::levels::GLOBALMV_GLOBALMV;
-use crate::levels::H_ADST;
-use crate::levels::H_DCT;
-use crate::levels::H_FLIPADST;
-use crate::levels::HOR_DOWN_PRED;
-use crate::levels::HOR_PRED;
-use crate::levels::HOR_UP_PRED;
-use crate::levels::IDTX;
-use crate::levels::InterPredMode;
-use crate::levels::N_COMP_INTER_PRED_MODES;
-use crate::levels::N_INTRA_PRED_MODES;
-use crate::levels::N_TX_TYPES_PLUS_LL;
-use crate::levels::N_UV_INTRA_PRED_MODES;
-use crate::levels::NEARESTMV;
-use crate::levels::NEARESTMV_NEARESTMV;
-use crate::levels::NEARESTMV_NEWMV;
-use crate::levels::NEARMV;
-use crate::levels::NEARMV_NEARMV;
-use crate::levels::NEARMV_NEWMV;
-use crate::levels::NEWMV;
-use crate::levels::NEWMV_NEARESTMV;
-use crate::levels::NEWMV_NEARMV;
-use crate::levels::NEWMV_NEWMV;
-use crate::levels::PAETH_PRED;
-use crate::levels::SMOOTH_H_PRED;
-use crate::levels::SMOOTH_PRED;
-use crate::levels::SMOOTH_V_PRED;
-use crate::levels::TxClass;
-use crate::levels::TxfmSize;
-use crate::levels::TxfmType;
-use crate::levels::V_ADST;
-use crate::levels::V_DCT;
-use crate::levels::V_FLIPADST;
-use crate::levels::VERT_LEFT_PRED;
-use crate::levels::VERT_PRED;
-use crate::levels::VERT_RIGHT_PRED;
 use std::ffi::c_uint;
 
 use strum::EnumCount;
 
-use crate::align::{Align4, Align8, Align16, Align64};
+use crate::align::{Align16, Align16, Align4, Align4, Align64, Align64, Align8, Align8};
 use crate::const_fn::const_for;
 use crate::enum_map::DefaultValue;
 use crate::in_range::InRange;
 use crate::include::dav1d::headers::{
-    Rav1dFilterMode, Rav1dWarpedMotionParams, Rav1dWarpedMotionType,
+    Rav1dFilterMode, Rav1dFilterMode, Rav1dWarpedMotionParams, Rav1dWarpedMotionParams,
+    Rav1dWarpedMotionType, Rav1dWarpedMotionType,
 };
 use crate::levels::{
-    ADST_ADST, ADST_DCT, ADST_FLIPADST, BlockLevel, BlockPartition, BlockSize, DC_PRED, DCT_ADST,
-    DCT_DCT, DCT_FLIPADST, DIAG_DOWN_LEFT_PRED, DIAG_DOWN_RIGHT_PRED, FLIPADST_ADST, FLIPADST_DCT,
-    FLIPADST_FLIPADST, Filter2d, GLOBALMV, GLOBALMV_GLOBALMV, H_ADST, H_DCT, H_FLIPADST,
-    HOR_DOWN_PRED, HOR_PRED, HOR_UP_PRED, IDTX, InterPredMode, N_COMP_INTER_PRED_MODES,
-    N_INTRA_PRED_MODES, N_TX_TYPES_PLUS_LL, N_UV_INTRA_PRED_MODES, NEARESTMV, NEARESTMV_NEARESTMV,
-    NEARESTMV_NEWMV, NEARMV, NEARMV_NEARMV, NEARMV_NEWMV, NEWMV, NEWMV_NEARESTMV, NEWMV_NEARMV,
-    NEWMV_NEWMV, PAETH_PRED, SMOOTH_H_PRED, SMOOTH_PRED, SMOOTH_V_PRED, TxClass, TxfmSize,
-    TxfmType, V_ADST, V_DCT, V_FLIPADST, VERT_LEFT_PRED, VERT_PRED, VERT_RIGHT_PRED,
+    BlockLevel, BlockLevel, BlockPartition, BlockPartition, BlockSize, BlockSize, Filter2d,
+    Filter2d, InterPredMode, InterPredMode, TxClass, TxClass, TxfmSize, TxfmSize, TxfmType,
+    TxfmType, ADST_ADST, ADST_ADST, ADST_DCT, ADST_DCT, ADST_FLIPADST, ADST_FLIPADST, DCT_ADST,
+    DCT_ADST, DCT_DCT, DCT_DCT, DCT_FLIPADST, DCT_FLIPADST, DC_PRED, DC_PRED, DIAG_DOWN_LEFT_PRED,
+    DIAG_DOWN_LEFT_PRED, DIAG_DOWN_RIGHT_PRED, DIAG_DOWN_RIGHT_PRED, FLIPADST_ADST, FLIPADST_ADST,
+    FLIPADST_DCT, FLIPADST_DCT, FLIPADST_FLIPADST, FLIPADST_FLIPADST, GLOBALMV, GLOBALMV,
+    GLOBALMV_GLOBALMV, GLOBALMV_GLOBALMV, HOR_DOWN_PRED, HOR_DOWN_PRED, HOR_PRED, HOR_PRED,
+    HOR_UP_PRED, HOR_UP_PRED, H_ADST, H_ADST, H_DCT, H_DCT, H_FLIPADST, H_FLIPADST, IDTX, IDTX,
+    NEARESTMV, NEARESTMV, NEARESTMV_NEARESTMV, NEARESTMV_NEARESTMV, NEARESTMV_NEWMV,
+    NEARESTMV_NEWMV, NEARMV, NEARMV, NEARMV_NEARMV, NEARMV_NEARMV, NEARMV_NEWMV, NEARMV_NEWMV,
+    NEWMV, NEWMV, NEWMV_NEARESTMV, NEWMV_NEARESTMV, NEWMV_NEARMV, NEWMV_NEARMV, NEWMV_NEWMV,
+    NEWMV_NEWMV, N_COMP_INTER_PRED_MODES, N_COMP_INTER_PRED_MODES, N_INTRA_PRED_MODES,
+    N_INTRA_PRED_MODES, N_TX_TYPES_PLUS_LL, N_TX_TYPES_PLUS_LL, N_UV_INTRA_PRED_MODES,
+    N_UV_INTRA_PRED_MODES, PAETH_PRED, PAETH_PRED, SMOOTH_H_PRED, SMOOTH_H_PRED, SMOOTH_PRED,
+    SMOOTH_PRED, SMOOTH_V_PRED, SMOOTH_V_PRED, VERT_LEFT_PRED, VERT_LEFT_PRED, VERT_PRED,
+    VERT_PRED, VERT_RIGHT_PRED, VERT_RIGHT_PRED, V_ADST, V_ADST, V_DCT, V_DCT, V_FLIPADST,
+    V_FLIPADST,
 };
 
 #[repr(C)]

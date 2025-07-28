@@ -48,7 +48,11 @@ impl EdgeFlags {
     }
 
     pub(crate) const fn select(&self, select: bool) -> Self {
-        if select { *self } else { Self::empty() }
+        if select {
+            *self
+        } else {
+            Self::empty()
+        }
     }
 }
 

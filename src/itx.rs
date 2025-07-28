@@ -19,16 +19,16 @@ use crate::include::dav1d::picture::{
     FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset,
 };
 use crate::itx_1d::{
-    rav1d_inv_adst4_1d_c, rav1d_inv_adst8_1d_c, rav1d_inv_adst16_1d_c, rav1d_inv_dct4_1d_c,
-    rav1d_inv_dct8_1d_c, rav1d_inv_dct16_1d_c, rav1d_inv_dct32_1d_c, rav1d_inv_dct64_1d_c,
-    rav1d_inv_flipadst4_1d_c, rav1d_inv_flipadst8_1d_c, rav1d_inv_flipadst16_1d_c,
-    rav1d_inv_identity4_1d_c, rav1d_inv_identity8_1d_c, rav1d_inv_identity16_1d_c,
-    rav1d_inv_identity32_1d_c, rav1d_inv_wht4_1d_c,
+    rav1d_inv_adst16_1d_c, rav1d_inv_adst4_1d_c, rav1d_inv_adst8_1d_c, rav1d_inv_dct16_1d_c,
+    rav1d_inv_dct32_1d_c, rav1d_inv_dct4_1d_c, rav1d_inv_dct64_1d_c, rav1d_inv_dct8_1d_c,
+    rav1d_inv_flipadst16_1d_c, rav1d_inv_flipadst4_1d_c, rav1d_inv_flipadst8_1d_c,
+    rav1d_inv_identity16_1d_c, rav1d_inv_identity32_1d_c, rav1d_inv_identity4_1d_c,
+    rav1d_inv_identity8_1d_c, rav1d_inv_wht4_1d_c,
 };
 use crate::levels::{
-    ADST_ADST, ADST_DCT, ADST_FLIPADST, DCT_ADST, DCT_DCT, DCT_FLIPADST, FLIPADST_ADST,
-    FLIPADST_DCT, FLIPADST_FLIPADST, H_ADST, H_DCT, H_FLIPADST, IDTX, N_TX_TYPES_PLUS_LL, TxfmSize,
-    TxfmType, V_ADST, V_DCT, V_FLIPADST, WHT_WHT,
+    TxfmSize, TxfmType, ADST_ADST, ADST_DCT, ADST_FLIPADST, DCT_ADST, DCT_DCT, DCT_FLIPADST,
+    FLIPADST_ADST, FLIPADST_DCT, FLIPADST_FLIPADST, H_ADST, H_DCT, H_FLIPADST, IDTX,
+    N_TX_TYPES_PLUS_LL, V_ADST, V_DCT, V_FLIPADST, WHT_WHT,
 };
 use crate::strided::Strided as _;
 use crate::wrap_fn_ptr::wrap_fn_ptr;
@@ -362,7 +362,9 @@ macro_rules! assign_itx1_bpc_fn {
 
 #[cfg(all(feature = "asm", any(target_arch = "arm", target_arch = "aarch64")))]
 macro_rules! assign_itx1_fn {
-    ($c:ident, $BD:ty, $w:literal, $h:literal, $ext:ident) => {{ assign_itx_fn!($c, BD, $w, $h, dct_dct, DCT_DCT, $ext) }};
+    ($c:ident, $BD:ty, $w:literal, $h:literal, $ext:ident) => {{
+        assign_itx_fn!($c, BD, $w, $h, dct_dct, DCT_DCT, $ext)
+    }};
 }
 
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]

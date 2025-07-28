@@ -1,8 +1,8 @@
 #![deny(unsafe_code)]
 
 use std::ffi::{c_int, c_uint};
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::{array, cmp, fmt, mem};
 
 use crate::c_arc::CArc;
@@ -15,24 +15,24 @@ use crate::include::dav1d::common::Rav1dDataProps;
 use crate::include::dav1d::data::Rav1dData;
 use crate::include::dav1d::dav1d::Rav1dDecodeFrameType;
 use crate::include::dav1d::headers::{
-    DRav1d, Dav1dSequenceHeader, RAV1D_MAX_CDEF_STRENGTHS, RAV1D_MAX_OPERATING_POINTS,
-    RAV1D_MAX_TILE_COLS, RAV1D_MAX_TILE_ROWS, RAV1D_PRIMARY_REF_NONE, RAV1D_REFS_PER_FRAME,
-    Rav1dAdaptiveBoolean, Rav1dChromaSamplePosition, Rav1dColorPrimaries, Rav1dContentLightLevel,
-    Rav1dFilmGrainData, Rav1dFilterMode, Rav1dFrameHeader, Rav1dFrameHeaderCdef,
-    Rav1dFrameHeaderDelta, Rav1dFrameHeaderDeltaLF, Rav1dFrameHeaderDeltaQ,
-    Rav1dFrameHeaderFilmGrain, Rav1dFrameHeaderLoopFilter, Rav1dFrameHeaderOperatingPoint,
-    Rav1dFrameHeaderQuant, Rav1dFrameHeaderRestoration, Rav1dFrameHeaderSegmentation,
-    Rav1dFrameHeaderSuperRes, Rav1dFrameHeaderTiling, Rav1dFrameSize, Rav1dFrameSkipMode,
-    Rav1dFrameType, Rav1dITUTT35, Rav1dLoopfilterModeRefDeltas, Rav1dMasteringDisplay,
-    Rav1dMatrixCoefficients, Rav1dObuType, Rav1dPixelLayout, Rav1dProfile, Rav1dRestorationType,
-    Rav1dSegmentationData, Rav1dSegmentationDataSet, Rav1dSequenceHeader,
+    DRav1d, Dav1dSequenceHeader, Rav1dAdaptiveBoolean, Rav1dChromaSamplePosition,
+    Rav1dColorPrimaries, Rav1dContentLightLevel, Rav1dFilmGrainData, Rav1dFilterMode,
+    Rav1dFrameHeader, Rav1dFrameHeaderCdef, Rav1dFrameHeaderDelta, Rav1dFrameHeaderDeltaLF,
+    Rav1dFrameHeaderDeltaQ, Rav1dFrameHeaderFilmGrain, Rav1dFrameHeaderLoopFilter,
+    Rav1dFrameHeaderOperatingPoint, Rav1dFrameHeaderQuant, Rav1dFrameHeaderRestoration,
+    Rav1dFrameHeaderSegmentation, Rav1dFrameHeaderSuperRes, Rav1dFrameHeaderTiling, Rav1dFrameSize,
+    Rav1dFrameSkipMode, Rav1dFrameType, Rav1dITUTT35, Rav1dLoopfilterModeRefDeltas,
+    Rav1dMasteringDisplay, Rav1dMatrixCoefficients, Rav1dObuType, Rav1dPixelLayout, Rav1dProfile,
+    Rav1dRestorationType, Rav1dSegmentationData, Rav1dSegmentationDataSet, Rav1dSequenceHeader,
     Rav1dSequenceHeaderOperatingParameterInfo, Rav1dSequenceHeaderOperatingPoint,
     Rav1dTransferCharacteristics, Rav1dTxfmMode, Rav1dWarpedMotionParams, Rav1dWarpedMotionType,
+    RAV1D_MAX_CDEF_STRENGTHS, RAV1D_MAX_OPERATING_POINTS, RAV1D_MAX_TILE_COLS, RAV1D_MAX_TILE_ROWS,
+    RAV1D_PRIMARY_REF_NONE, RAV1D_REFS_PER_FRAME,
 };
 use crate::internal::{Rav1dContext, Rav1dState, Rav1dTileGroup, Rav1dTileGroupHeader};
 use crate::levels::ObuMetaType;
 use crate::log::Rav1dLog as _;
-use crate::picture::{PictureFlags, rav1d_picture_copy_props};
+use crate::picture::{rav1d_picture_copy_props, PictureFlags};
 use crate::thread_task::FRAME_ERROR;
 
 struct Debug {
@@ -1354,11 +1354,9 @@ fn parse_restoration(
         };
 
         unit_size = match r#type {
-            [
-                Rav1dRestorationType::None,
-                Rav1dRestorationType::None,
-                Rav1dRestorationType::None,
-            ] => [8, 0],
+            [Rav1dRestorationType::None, Rav1dRestorationType::None, Rav1dRestorationType::None] => {
+                [8, 0]
+            }
             _ => {
                 // Log2 of the restoration unit size.
                 let mut unit_size_0 = 6 + seqhdr.sb128;

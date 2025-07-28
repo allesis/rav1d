@@ -16,7 +16,7 @@ use crate::ctx::CaseSet;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
 use crate::include::common::bitdepth::{
-    AsPrimitive, BPC, BPC, BitDepth, BitDepth, ToPrimitive, ToPrimitive,
+    AsPrimitive, BitDepth, BitDepth, ToPrimitive, ToPrimitive, BPC, BPC,
 };
 use crate::include::common::dump::{
     ac_dump, coef_dump, coef_dump, hex_dump, hex_dump, hex_dump_pic, hex_dump_pic,
@@ -40,12 +40,12 @@ use crate::intra_edge::EdgeFlags;
 use crate::ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_flag, sm_uv_flag, sm_uv_flag};
 use crate::levels::{
     Av1Block, Av1BlockInter, Av1BlockInter, Av1BlockIntra, Av1BlockIntra, Av1BlockIntraInter,
-    Av1BlockIntraInter, BlockSize, BlockSize, CFL_PRED, CFL_PRED, CompInterType, CompInterType,
-    DC_PRED, DC_PRED, DCT_DCT, DCT_DCT, FILTER_PRED, FILTER_PRED, Filter2d, Filter2d, GLOBALMV,
-    GLOBALMV, GLOBALMV_GLOBALMV, GLOBALMV_GLOBALMV, IDTX, IDTX, InterIntraPredMode,
-    InterIntraPredMode, InterIntraType, InterIntraType, IntraPredMode, IntraPredMode, MotionMode,
-    MotionMode, Mv, Mv, SMOOTH_PRED, SMOOTH_PRED, TxClass, TxClass, TxfmSize, TxfmSize, TxfmType,
-    TxfmType, WHT_WHT, WHT_WHT,
+    Av1BlockIntraInter, BlockSize, BlockSize, CompInterType, CompInterType, Filter2d, Filter2d,
+    InterIntraPredMode, InterIntraPredMode, InterIntraType, InterIntraType, IntraPredMode,
+    IntraPredMode, MotionMode, MotionMode, Mv, Mv, TxClass, TxClass, TxfmSize, TxfmSize, TxfmType,
+    TxfmType, CFL_PRED, CFL_PRED, DCT_DCT, DCT_DCT, DC_PRED, DC_PRED, FILTER_PRED, FILTER_PRED,
+    GLOBALMV, GLOBALMV, GLOBALMV_GLOBALMV, GLOBALMV_GLOBALMV, IDTX, IDTX, SMOOTH_PRED, SMOOTH_PRED,
+    WHT_WHT, WHT_WHT,
 };
 use crate::lf_apply::{
     rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_cols,
@@ -53,31 +53,30 @@ use crate::lf_apply::{
 };
 use crate::lr_apply::rav1d_lr_sbrow;
 use crate::msac::{
-    MsacContext, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_adapt,
-    rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi,
-    rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi,
-    rav1d_msac_decode_bool_rust, rav1d_msac_decode_bools, rav1d_msac_decode_bools,
-    rav1d_msac_decode_bools, rav1d_msac_decode_bools, rav1d_msac_decode_hi_tok,
-    rav1d_msac_decode_hi_tok, rav1d_msac_decode_hi_tok, rav1d_msac_decode_hi_tok,
-    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt4,
-    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt4,
-    rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt8,
-    rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt8,
+    rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi,
+    rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bool_rust,
+    rav1d_msac_decode_bools, rav1d_msac_decode_bools, rav1d_msac_decode_bools,
+    rav1d_msac_decode_bools, rav1d_msac_decode_hi_tok, rav1d_msac_decode_hi_tok,
+    rav1d_msac_decode_hi_tok, rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt16,
     rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt16,
-    rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt16,
+    rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt4,
+    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt4,
+    rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt8,
+    rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt8,
+    rav1d_msac_decode_symbol_adapt8, MsacContext,
 };
 use crate::picture::Rav1dThreadPicture;
 use crate::pixels::Pixels as _;
 use crate::scan::DAV1D_SCANS;
 use crate::strided::Strided as _;
 use crate::tables::{
-    DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE, DAV1D_LO_CTX_OFFSETS, DAV1D_SKIP_CTX,
-    DAV1D_TX_TYPE_CLASS, DAV1D_TX_TYPES_PER_SET, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE,
-    LoCtxOffset, TxfmInfo, TxfmInfo, dav1d_filter_2d, dav1d_filter_mode_to_y_mode,
-    dav1d_lo_ctx_offsets, dav1d_skip_ctx, dav1d_tx_type_class, dav1d_tx_types_per_set,
-    dav1d_txfm_dimensions, dav1d_txtp_from_uvmode,
+    dav1d_filter_2d, dav1d_filter_mode_to_y_mode, dav1d_lo_ctx_offsets, dav1d_skip_ctx,
+    dav1d_tx_type_class, dav1d_tx_types_per_set, dav1d_txfm_dimensions, dav1d_txtp_from_uvmode,
+    LoCtxOffset, TxfmInfo, TxfmInfo, DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE,
+    DAV1D_LO_CTX_OFFSETS, DAV1D_SKIP_CTX, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE,
+    DAV1D_TX_TYPES_PER_SET, DAV1D_TX_TYPE_CLASS,
 };
-use crate::wedge::{DAV1D_II_MASKS, DAV1D_WEDGE_MASKS, dav1d_ii_masks, dav1d_wedge_masks};
+use crate::wedge::{dav1d_ii_masks, dav1d_wedge_masks, DAV1D_II_MASKS, DAV1D_WEDGE_MASKS};
 use crate::with_offset::WithOffset;
 
 impl Bxy {
@@ -791,7 +790,11 @@ fn decode_coefs<BD: BitDepth>(
                     &mut ts_c.cdf.m.txtp_inter3[t_dim.min as usize],
                 );
                 idx = bool_idx as u8;
-                if bool_idx { DCT_DCT } else { IDTX }
+                if bool_idx {
+                    DCT_DCT
+                } else {
+                    IDTX
+                }
             } else if t_dim.min == TxfmSize::S16x16 as _ {
                 idx = rav1d_msac_decode_symbol_adapt16(
                     &mut ts_c.msac,

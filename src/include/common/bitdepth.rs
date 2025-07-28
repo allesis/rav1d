@@ -5,7 +5,7 @@ use std::ops::{Add, Div, Mul, Rem, Shr};
 
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::align::{Align8, Align16, ArrayDefault};
+use crate::align::{Align16, Align8, ArrayDefault};
 use crate::include::common::intops::clip;
 
 pub trait FromPrimitive<T> {

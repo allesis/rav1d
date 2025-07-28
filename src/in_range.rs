@@ -31,7 +31,11 @@ where
 
     pub fn new(value: T) -> Option<Self> {
         let this = Self(value);
-        if this.in_bounds() { Some(this) } else { None }
+        if this.in_bounds() {
+            Some(this)
+        } else {
+            None
+        }
     }
 
     pub fn get(self) -> T {
