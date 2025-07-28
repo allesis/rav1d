@@ -551,6 +551,24 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
     hash
 }
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    coeffs.iter().for_each(|coeff| {
+        if *coeff == 0 {
+        } else {
+            (*coeff).hash(&mut hasher)
+        }
+    });
+    eob.hash(&mut hasher);
+    width.hash(&mut hasher);
+    height.hash(&mut hasher);
+    let hash = hasher.finish();
+    println!("EOB {:?}", eob);
+    hash
+}
+
 fn decode_coefs<BD: BitDepth>(
     f: &Rav1dFrameData,
     ts: usize,
@@ -568,22 +586,6 @@ fn decode_coefs<BD: BitDepth>(
     txtp: &mut TxfmType,
     res_ctx: &mut u8,
 ) -> c_int {
-    /*
-    let hash;
-    let hash_high: u32 = rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32;
-    hash =
-        ((hash_high as u64) << 32) | ((rav1d_msac_decode_bools(&mut ts_c.msac, 32) as u32) as u64);
-    println!("HASH IS {:?}", hash);
-    if hash != u64::MAX {
-        println!("HASH IS {:?}", hash);
-        loop {
-            let byte = rav1d_msac_decode_bools(&mut ts_c.msac, 8) as u8;
-            // print the leading zero
-            println!("{:02X?}", byte);
-        }
-    }
-    */
-
     struct Cf<'a, BD: BitDepth>(&'a mut [BD::Coef]);
 
     impl<'a, BD: BitDepth> Cf<'a, BD> {
@@ -904,6 +906,7 @@ fn decode_coefs<BD: BitDepth>(
     } else {
         eob_bin as u16
     };
+
     // base tokens
     let mut rc;
     let mut dc_tok;
