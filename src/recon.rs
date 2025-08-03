@@ -519,7 +519,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -531,7 +531,9 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u64 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    hash
+    (((hash >> 32) ^ hash) & 0x00000000FFFFFFFF)
+        .try_into()
+        .expect("FAILED TO CONVERT HASH")
 }
 
 fn decode_coefs<BD: BitDepth>(
@@ -611,24 +613,6 @@ fn decode_coefs<BD: BitDepth>(
         println!("Start: r={}", ts_c.msac.rng);
     }
 
-    let marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-
-    let mut hash: u64 = 0;
-    if marker {
-        for _ in 0..64 {
-            hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as u64;
-        }
-        //println!("HASH {:?}", hash);
-    } else {
-        // HACK: We need to initialize hash to stop the compiler from complaining later
-        // This value is never used tho
-        //
-        // TODO: Find a better way to do this
-        hash = 0;
-    }
-
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
     let all_skip = rav1d_msac_decode_bool_adapt(
@@ -642,6 +626,28 @@ fn decode_coefs<BD: BitDepth>(
         );
     }
 
+    if all_skip {
+        *res_ctx = 0x40;
+        *txtp = if lossless { WHT_WHT } else { DCT_DCT };
+        return -1;
+    }
+    let marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+
+    let mut hash: u32 = 0;
+    if marker {
+        for _ in 0..64 {
+            hash <<= 1;
+            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+            hash |= bit as u32;
+        }
+        //println!("HASH {:?}", hash);
+    } else {
+        // HACK: We need to initialize hash to stop the compiler from complaining later
+        // This value is never used tho
+        //
+        // TODO: Find a better way to do this
+        hash = 0;
+    }
     let sw = cmp::min(1 << t_dim.lw, 8) as usize;
     let sh = cmp::min(1 << t_dim.lh, 8) as usize;
     let cf_len = sw * 4 * sh * 4;
@@ -685,11 +691,6 @@ fn decode_coefs<BD: BitDepth>(
             // We should panic!
             panic!("NEEDED TO READ A HASH BUT HAVE NO HASHMAP TO READ FROM");
         }
-    }
-    if all_skip {
-        *res_ctx = 0x40;
-        *txtp = if lossless { WHT_WHT } else { DCT_DCT };
-        return -1;
     }
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
