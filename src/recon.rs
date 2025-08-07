@@ -607,7 +607,7 @@ fn decode_coefs<BD: BitDepth>(
     let lossless = frame_hdr.segmentation.lossless[b.seg_id.get()];
     let t_dim = &DAV1D_TXFM_DIMENSIONS[tx as usize];
     #[expect(clippy::overly_complex_bool_expr, reason = "used for debugging")]
-    let dbg = plane != 0 && true;
+    let dbg = plane != 0 && dbg_block_info && false;
 
     if dbg {
         println!("Start: r={}", ts_c.msac.rng);
