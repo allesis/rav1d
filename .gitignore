@@ -20,3 +20,5 @@ target/
 
 .gdb_history
 .gdbinit
+.direnv
+blue.y4m
