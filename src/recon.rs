@@ -13,7 +13,7 @@ use crate::cdef_apply::rav1d_cdef_brow;
 use crate::ctx::CaseSet;
 use crate::env::get_uv_inter_txtp;
 use crate::in_range::InRange;
-use crate::include::common::bitdepth::{AsPrimitive, BitDepth, ToPrimitive, BPC};
+use crate::include::common::bitdepth::{AsPrimitive, BPC, BitDepth, ToPrimitive};
 use crate::include::common::dump::{ac_dump, coef_dump, hex_dump, hex_dump_pic};
 use crate::include::common::intops::{apply_sign64, clip, ulog2};
 use crate::include::dav1d::dav1d::Rav1dInloopFilterType;
@@ -28,26 +28,26 @@ use crate::internal::{
 use crate::intra_edge::EdgeFlags;
 use crate::ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag};
 use crate::levels::{
-    Av1Block, Av1BlockInter, Av1BlockIntra, Av1BlockIntraInter, BlockSize, CompInterType, Filter2d,
-    InterIntraPredMode, InterIntraType, IntraPredMode, MotionMode, Mv, TxClass, TxfmSize, TxfmType,
-    CFL_PRED, DCT_DCT, DC_PRED, FILTER_PRED, GLOBALMV, GLOBALMV_GLOBALMV, IDTX, SMOOTH_PRED,
+    Av1Block, Av1BlockInter, Av1BlockIntra, Av1BlockIntraInter, BlockSize, CFL_PRED, CompInterType,
+    DC_PRED, DCT_DCT, FILTER_PRED, Filter2d, GLOBALMV, GLOBALMV_GLOBALMV, IDTX, InterIntraPredMode,
+    InterIntraType, IntraPredMode, MotionMode, Mv, SMOOTH_PRED, TxClass, TxfmSize, TxfmType,
     WHT_WHT,
 };
 use crate::lf_apply::{rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_rows};
 use crate::lr_apply::rav1d_lr_sbrow;
 use crate::msac::{
-    rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bools,
-    rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt16, rav1d_msac_decode_symbol_adapt4,
-    rav1d_msac_decode_symbol_adapt8, MsacContext,
+    MsacContext, rav1d_msac_decode_bool, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi,
+    rav1d_msac_decode_bools, rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt4,
+    rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt16,
 };
 use crate::picture::Rav1dThreadPicture;
 use crate::pixels::Pixels as _;
 use crate::scan::DAV1D_SCANS;
 use crate::strided::Strided as _;
 use crate::tables::{
-    LoCtxOffset, TxfmInfo, DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE, DAV1D_LO_CTX_OFFSETS,
-    DAV1D_SKIP_CTX, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE, DAV1D_TX_TYPES_PER_SET,
-    DAV1D_TX_TYPE_CLASS,
+    DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE, DAV1D_LO_CTX_OFFSETS, DAV1D_SKIP_CTX,
+    DAV1D_TX_TYPE_CLASS, DAV1D_TX_TYPES_PER_SET, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE,
+    LoCtxOffset, TxfmInfo,
 };
 use crate::wedge::{DAV1D_II_MASKS, DAV1D_WEDGE_MASKS};
 use crate::with_offset::WithOffset;
@@ -553,6 +553,8 @@ fn decode_coefs<BD: BitDepth>(
         return -1;
     }
 
+    let _ = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
     *txtp = match &b.ii {
@@ -607,11 +609,7 @@ fn decode_coefs<BD: BitDepth>(
                     &mut ts_c.cdf.m.txtp_inter3[t_dim.min as usize],
                 );
                 idx = bool_idx as u8;
-                if bool_idx {
-                    DCT_DCT
-                } else {
-                    IDTX
-                }
+                if bool_idx { DCT_DCT } else { IDTX }
             } else if t_dim.min == TxfmSize::S16x16 as _ {
                 idx = rav1d_msac_decode_symbol_adapt16(
                     &mut ts_c.msac,
@@ -2745,15 +2743,15 @@ pub(crate) fn rav1d_recon_b_intra<BD: BitDepth>(
                                 cf = t.cf.select_mut::<BD>();
                                 if debug_block_info!(f, t.b) {
                                     println!(
-                                            "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={} [x={},cbx4={}]",
-                                            pl,
-                                            b.uvtx,
-                                            txtp,
-                                            eob,
-                                            ts_c.as_deref().unwrap().msac.rng,
-                                            x,
-                                            cbx4,
-                                        );
+                                        "Post-uv-cf-blk[pl={},tx={:?},txtp={},eob={}]: r={} [x={},cbx4={}]",
+                                        pl,
+                                        b.uvtx,
+                                        txtp,
+                                        eob,
+                                        ts_c.as_deref().unwrap().msac.rng,
+                                        x,
+                                        cbx4,
+                                    );
                                 }
                                 CaseSet::<16, true>::many(
                                     [l_ccoef, a_ccoef],
