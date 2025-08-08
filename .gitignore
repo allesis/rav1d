@@ -22,3 +22,4 @@ target/
 .gdbinit
 .direnv
 blue.y4m
+test.y4m
