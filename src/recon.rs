@@ -26,8 +26,8 @@ use crate::{
         dav1d::{
             dav1d::Rav1dInloopFilterType,
             headers::{
-                Rav1dPixelLayout, Rav1dPixelLayoutSubSampled, Rav1dWarpedMotionParams,
-                Rav1dWarpedMotionType,
+                Rav1dFrameType, Rav1dPixelLayout, Rav1dPixelLayoutSubSampled,
+                Rav1dWarpedMotionParams, Rav1dWarpedMotionType,
             },
             picture::{Rav1dPictureDataComponent, Rav1dPictureDataComponentOffset},
         },
@@ -631,7 +631,17 @@ fn decode_coefs<BD: BitDepth>(
         *txtp = if lossless { WHT_WHT } else { DCT_DCT };
         return -1;
     }
-    let marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+
+    let frame_type = f.frame_hdr().frame_type;
+    let marker;
+    match frame_type {
+        Rav1dFrameType::Inter => {
+            marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+        }
+        _ => {
+            marker = false;
+        }
+    }
 
     let mut hash: u32 = 0;
     if marker {
