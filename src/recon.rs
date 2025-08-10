@@ -553,8 +553,6 @@ fn decode_coefs<BD: BitDepth>(
         return -1;
     }
 
-    let _ = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
     *txtp = match &b.ii {
