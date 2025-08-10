@@ -632,10 +632,9 @@ fn decode_coefs<BD: BitDepth>(
         return -1;
     }
 
-    let frame_type = f.frame_hdr().frame_type;
     let marker;
-    match frame_type {
-        Rav1dFrameType::Inter => {
+    match b.ii {
+        Inter(_) => {
             marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
         }
         _ => {
@@ -645,7 +644,7 @@ fn decode_coefs<BD: BitDepth>(
 
     let mut hash: u32 = 0;
     if marker {
-        for _ in 0..64 {
+        for _ in 0..32 {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
             hash |= bit as u32;
