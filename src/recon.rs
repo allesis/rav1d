@@ -537,10 +537,11 @@ fn decode_coefs<BD: BitDepth>(
 
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
-    let all_skip = rav1d_msac_decode_bool_adapt(
+    /*let all_skip = rav1d_msac_decode_bool_adapt(
         &mut ts_c.msac,
         &mut ts_c.cdf.coef.skip[t_dim.ctx as usize][sctx.get() as usize],
-    );
+    );*/
+    let all_skip = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
     if dbg {
         println!(
             "Post-non-zero[{}][{}][{}]: r={}",
