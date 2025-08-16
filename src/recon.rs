@@ -519,7 +519,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize, width: usize, height: usize) -> u32 {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -528,6 +528,7 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
         }
     });
     eob.hash(&mut hasher);
+    tx_size.hash(&mut hasher);
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
@@ -615,11 +616,10 @@ fn decode_coefs<BD: BitDepth>(
 
     // does this block have any non-zero coefficients
     let sctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
-    /*let all_skip = rav1d_msac_decode_bool_adapt(
+    let all_skip = rav1d_msac_decode_bool_adapt(
         &mut ts_c.msac,
         &mut ts_c.cdf.coef.skip[t_dim.ctx as usize][sctx.get() as usize],
-    );*/
-    let all_skip = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+    );
     if dbg {
         println!(
             "Post-non-zero[{}][{}][{}]: r={}",
@@ -632,23 +632,7 @@ fn decode_coefs<BD: BitDepth>(
         *txtp = if lossless { WHT_WHT } else { DCT_DCT };
         return -1;
     }
-    let marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
 
-    let mut hash: u32 = 0;
-    if marker {
-        for _ in 0..64 {
-            hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as u32;
-        }
-        //println!("HASH {:?}", hash);
-    } else {
-        // HACK: We need to initialize hash to stop the compiler from complaining later
-        // This value is never used tho
-        //
-        // TODO: Find a better way to do this
-        hash = 0;
-    }
     let sw = cmp::min(1 << t_dim.lw, 8) as usize;
     let sh = cmp::min(1 << t_dim.lh, 8) as usize;
     let cf_len = sw * 4 * sh * 4;
@@ -660,8 +644,14 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let mut cf = Cf::<BD>(cf);
-    if marker {
-        // We got a hash to process
+    if let true = rav1d_msac_decode_bool_equi(&mut ts_c.msac) {
+        let mut hash: u32 = 0;
+        for _ in 0..32 {
+            hash <<= 1;
+            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+            hash |= bit as u32;
+        }
+        let hash = hash;
         if let Some(hashmap) = hashmap.clone() {
             let hashmap_lock = hashmap.lock(); // ("FAILED TO LOCK HASHMAP");
             match hashmap_lock.get(&hash) {
@@ -1407,9 +1397,12 @@ fn decode_coefs<BD: BitDepth>(
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(hashmap) = hashmap {
-        let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
+        let hash = hashcoeffs(cf.into_vec_i32(), eob, *txtp as usize, sw, sh);
 
-        //println!("HASH {:?} -> CF {:?}", hash, cf);
+        /*println!(
+            "HASH {:?} -> EOB {}, TXTP {} W {} H {} CF {:?}",
+            hash, eob, *txtp as usize, sw, sh, cf
+        );*/
 
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
