@@ -527,12 +527,12 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize, width: usize, height: 
             (*coeff).hash(&mut hasher)
         }
     });
-    //eob.hash(&mut hasher);
-    //tx_size.hash(&mut hasher);
-    //width.hash(&mut hasher);
-    //height.hash(&mut hasher);
+    eob.hash(&mut hasher);
+    tx_size.hash(&mut hasher);
+    width.hash(&mut hasher);
+    height.hash(&mut hasher);
     let hash = hasher.finish();
-    (((hash >> 48) ^ (hash >> 32) ^ (hash >> 16) ^ hash) & 0x000000000000FFFF)
+    (((hash >> 32) ^ hash) & 0x00000000FFFFFFFF)
         .try_into()
         .expect("FAILED TO CONVERT HASH")
 }
@@ -644,16 +644,19 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let mut cf = Cf::<BD>(cf);
-    let marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-    if marker {
+    //println!("Coeffs: {:?}", cf);
+    let marker = rav1d_msac_decode_bools(&mut ts_c.msac, 1);
+    if marker != 0 {
         let mut hash: u32 = 0;
-        for _ in 0..16 {
+        for _ in 0..32 {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
             hash |= bit as u32;
         }
         let hash = hash;
+        println!("Let some hash = {}", hash);
         if let Some(hashmap) = hashmap.clone() {
+            println!("Let some hash = {}", hash);
             let hashmap_lock = hashmap.lock(); // ("FAILED TO LOCK HASHMAP");
             println!(
                 "{:?}",
@@ -1405,8 +1408,8 @@ fn decode_coefs<BD: BitDepth>(
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(hashmap) = hashmap {
-        //let hash = hashcoeffs(cf.into_vec_i32(), eob, *txtp as usize, sw, sh);
-        let hash = hashcoeffs(cf.into_vec_i32(), 0, 0, 0, 0);
+        let hash = hashcoeffs(cf.into_vec_i32(), eob, *txtp as usize, sw, sh);
+        //let hash = hashcoeffs(cf.into_vec_i32(), 0, 0, 0, 0);
 
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
@@ -1414,7 +1417,7 @@ fn decode_coefs<BD: BitDepth>(
             res_ctx: *res_ctx,
             txtp: *txtp,
         };
-        //println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
+        println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
         hashmap.lock().insert(hash, hash_object);
     }
 
