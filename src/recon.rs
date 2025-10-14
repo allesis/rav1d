@@ -632,15 +632,7 @@ fn decode_coefs<BD: BitDepth>(
         return -1;
     }
 
-    let marker;
-    match b.ii {
-        Inter(_) => {
-            marker = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-        }
-        _ => {
-            marker = false;
-        }
-    }
+    let marker = rav1d_msac_decode_bools(&mut ts_c.msac, 1) != 0;
 
     let mut hash: u32 = 0;
     if marker {
@@ -650,12 +642,6 @@ fn decode_coefs<BD: BitDepth>(
             hash |= bit as u32;
         }
         //println!("HASH {:?}", hash);
-    } else {
-        // HACK: We need to initialize hash to stop the compiler from complaining later
-        // This value is never used tho
-        //
-        // TODO: Find a better way to do this
-        hash = 0;
     }
     let sw = cmp::min(1 << t_dim.lw, 8) as usize;
     let sh = cmp::min(1 << t_dim.lh, 8) as usize;
@@ -1414,10 +1400,10 @@ fn decode_coefs<BD: BitDepth>(
     let res_eob = eob as i32;
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
-    if let Some(hashmap) = hashmap {
+    if let Some(ref hashmap) = hashmap {
         let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
 
-        //println!("HASH {:?} -> CF {:?}", hash, cf);
+        println!("HASH {:?}", hash);
 
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
@@ -1426,7 +1412,17 @@ fn decode_coefs<BD: BitDepth>(
             txtp: *txtp,
         };
         //println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
-        hashmap.lock().insert(hash, hash_object);
+        let mut hashmap_lock = hashmap.lock();
+        println!("{}", hashmap_lock.len());
+        hashmap_lock.insert(hash, hash_object);
+        println!("{}", hashmap_lock.len());
+    }
+
+    {
+        if let Some(ref hashmap) = hashmap {
+            let hashmap_lock = hashmap.lock();
+            println!("{}", hashmap_lock.len());
+        }
     }
 
     //println!("CF {:?}", cf);
