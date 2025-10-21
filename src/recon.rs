@@ -632,7 +632,11 @@ fn decode_coefs<BD: BitDepth>(
         return -1;
     }
 
-    let marker = rav1d_msac_decode_bools(&mut ts_c.msac, 1) != 0;
+    let mctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
+    let marker = rav1d_msac_decode_bool_adapt(
+        &mut ts_c.msac,
+        &mut ts_c.cdf.coef.marker[t_dim.ctx as usize][mctx.get() as usize],
+    );
 
     let mut hash: u32 = 0;
     if marker {
