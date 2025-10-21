@@ -531,7 +531,8 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    (((hash >> 48) ^ (hash >> 32) ^ (hash >> 16) ^ hash) & 0x000000000000FFFF)
+    //(((hash >> 48) ^ (hash >> 32) ^ (hash >> 16) ^ hash) & 0x000000000000FFFF)
+    (hash & 0xFF)
         //(((hash >> 32) ^ hash) & 0x00000000FFFFFFFF)
         .try_into()
         .expect("FAILED TO CONVERT HASH")
@@ -637,7 +638,7 @@ fn decode_coefs<BD: BitDepth>(
 
     let mut hash: u32 = 0;
     if marker {
-        for _ in 0..16 {
+        for _ in 0..8 {
             hash <<= 1;
             let bit = rav1d_msac_decode_bools(&mut ts_c.msac, 1);
             hash |= bit as u32;
