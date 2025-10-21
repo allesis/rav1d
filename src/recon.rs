@@ -531,7 +531,8 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    (((hash >> 32) ^ hash) & 0x00000000FFFFFFFF)
+    (((hash >> 48) ^ (hash >> 32) ^ (hash >> 16) ^ hash) & 0x000000000000FFFF)
+        //(((hash >> 32) ^ hash) & 0x00000000FFFFFFFF)
         .try_into()
         .expect("FAILED TO CONVERT HASH")
 }
@@ -636,9 +637,9 @@ fn decode_coefs<BD: BitDepth>(
 
     let mut hash: u32 = 0;
     if marker {
-        for _ in 0..32 {
+        for _ in 0..16 {
             hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
+            let bit = rav1d_msac_decode_bools(&mut ts_c.msac, 1);
             hash |= bit as u32;
         }
         //println!("HASH {:?}", hash);
@@ -1403,7 +1404,7 @@ fn decode_coefs<BD: BitDepth>(
     if let Some(ref hashmap) = hashmap {
         let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
 
-        println!("HASH {:?}", hash);
+        //println!("HASH {:?}", hash);
 
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
@@ -1413,17 +1414,17 @@ fn decode_coefs<BD: BitDepth>(
         };
         //println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
         let mut hashmap_lock = hashmap.lock();
-        println!("{}", hashmap_lock.len());
+        //println!("{}", hashmap_lock.len());
         hashmap_lock.insert(hash, hash_object);
-        println!("{}", hashmap_lock.len());
+        //println!("{}", hashmap_lock.len());
     }
 
-    {
+    /*{
         if let Some(ref hashmap) = hashmap {
             let hashmap_lock = hashmap.lock();
-            println!("{}", hashmap_lock.len());
+            //println!("{}", hashmap_lock.len());
         }
-    }
+    }*/
 
     //println!("CF {:?}", cf);
     // context
