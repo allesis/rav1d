@@ -14,6 +14,7 @@ check VIDEO: release (test VIDEO)
 test VIDEO: release
 	./target/release/dav1d -i $HOME/video/{{VIDEO}}.ivf -o $HOME/video/{{VIDEO}}-decode.y4m
 test-convert VIDEO: (test VIDEO) (convert VIDEO) (cleanup VIDEO)
+	./target/release/dav1d --threads 1 -i $HOME/video/{{VIDEO}}.ivf -o $HOME/video/{{VIDEO}}-decode.y4m
 cleanup VIDEO:
 	rm $HOME/video/{{VIDEO}}-decode.y4m
 convert VIDEO: release (test VIDEO) && (cleanup VIDEO)
