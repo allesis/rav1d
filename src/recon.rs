@@ -519,7 +519,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize, width: usize, height: usize) -> u32 {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -528,11 +528,10 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize, width: usize, height: 
         }
     });
     eob.hash(&mut hasher);
-    tx_size.hash(&mut hasher);
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    (((hash >> 32) ^ hash) & 0x00000000FFFFFFFF)
+    (hash & 0xFFFFFFFF)
         .try_into()
         .expect("FAILED TO CONVERT HASH")
 }
@@ -645,7 +644,11 @@ fn decode_coefs<BD: BitDepth>(
     };
     let mut cf = Cf::<BD>(cf);
     //println!("Coeffs: {:?}", cf);
-    let marker = rav1d_msac_decode_bools(&mut ts_c.msac, 1);
+    let mctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
+    let marker = rav1d_msac_decode_bool_adapt(
+        &mut ts_c.msac,
+        &mut ts_c.cdf.coef.marker[t_dim.ctx as usize][mctx.get() as usize],
+    );
     if marker != 0 {
         let mut hash: u32 = 0;
         for _ in 0..32 {
@@ -654,10 +657,12 @@ fn decode_coefs<BD: BitDepth>(
             hash |= bit as u32;
         }
         let hash = hash;
-        println!("Let some hash = {}", hash);
+        //println!("Found hash = {}", hash);
         if let Some(hashmap) = hashmap.clone() {
-            println!("Let some hash = {}", hash);
+            //println!("Let some hash = {}", hash);
             let hashmap_lock = hashmap.lock(); // ("FAILED TO LOCK HASHMAP");
+
+            /*
             println!(
                 "{:?}",
                 hashmap_lock
@@ -665,12 +670,14 @@ fn decode_coefs<BD: BitDepth>(
                     .map(|(hash, hash_object)| { hash })
                     .collect::<Vec<_>>()
             );
+            */
             match hashmap_lock.get(&hash) {
                 Some(hash_object) => {
                     //println!("USED A HASH TO DECODE A TILE!");
                     cf.insert_vec(&hash_object.vec);
                     *res_ctx = hash_object.res_ctx;
                     *txtp = hash_object.txtp;
+                    println!("Used a hash");
                     return hash_object.eob;
                 }
                 None => {
@@ -680,10 +687,13 @@ fn decode_coefs<BD: BitDepth>(
                     // If it is, we panic, otherwise return as a empty frame and try to keep going
                     //
                     // For now we just panic
+                    /*
                     panic!(
                         "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}",
                         hash
                     );
+                    */
+                    return -1;
                 }
             }
         } else {
@@ -1408,7 +1418,7 @@ fn decode_coefs<BD: BitDepth>(
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(hashmap) = hashmap {
-        let hash = hashcoeffs(cf.into_vec_i32(), eob, *txtp as usize, sw, sh);
+        let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
         //let hash = hashcoeffs(cf.into_vec_i32(), 0, 0, 0, 0);
 
         let hash_object = HashObject {
@@ -1417,7 +1427,7 @@ fn decode_coefs<BD: BitDepth>(
             res_ctx: *res_ctx,
             txtp: *txtp,
         };
-        println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
+        //println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
         hashmap.lock().insert(hash, hash_object);
     }
 

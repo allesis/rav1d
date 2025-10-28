@@ -3,19 +3,19 @@
 use std::{
     cmp,
     ffi::c_uint,
-    sync::{atomic::AtomicU32, Arc},
+    sync::{Arc, atomic::AtomicU32},
 };
 
 use parking_lot::{RwLock, RwLockWriteGuard};
 use strum::EnumCount;
 
 use crate::{
-    align::{Align16, Align32, Align4, Align8},
+    align::{Align4, Align8, Align16, Align32},
     error::Rav1dResult,
     include::dav1d::headers::{Rav1dFilterMode, Rav1dFrameHeader},
     levels::{
-        BlockLevel, BlockPartition, BlockSize, MVJoint, SegmentId, TxfmSize,
-        N_COMP_INTER_PRED_MODES, N_INTRA_PRED_MODES, N_UV_INTRA_PRED_MODES,
+        BlockLevel, BlockPartition, BlockSize, MVJoint, N_COMP_INTER_PRED_MODES,
+        N_INTRA_PRED_MODES, N_UV_INTRA_PRED_MODES, SegmentId, TxfmSize,
     },
     tables::DAV1D_PARTITION_TYPE_COUNT,
 };
