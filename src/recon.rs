@@ -113,7 +113,7 @@ pub(crate) type ReconBInterFn = fn(
 ) -> Result<(), ()>;
 
 pub(crate) type FilterSbrowFn =
-fn(&Rav1dContext, &Rav1dFrameData, &mut Rav1dTaskContext, c_int) -> ();
+    fn(&Rav1dContext, &Rav1dFrameData, &mut Rav1dTaskContext, c_int) -> ();
 
 pub(crate) type BackupIpredEdgeFn = fn(&Rav1dFrameData, &mut Rav1dTaskContext) -> ();
 
@@ -650,16 +650,15 @@ fn decode_coefs<BD: BitDepth>(
         &mut ts_c.cdf.coef.marker[t_dim.ctx as usize][mctx.get() as usize],
     );
 
-    let mut hash: u32 = 0;
-    if marker {
-        for _ in 0..32 {
-            hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as u32;
+    print!(
+        "{}",
+        match marker {
+            true => 0,
+            _ => 1,
         }
-        //println!("HASH {:?}", hash);
-    }
-    if marker != 0 {
+    );
+
+    if marker {
         let mut hash: u32 = 0;
         for _ in 0..32 {
             hash <<= 1;
@@ -703,7 +702,7 @@ fn decode_coefs<BD: BitDepth>(
                         hash
                     );
                     */
-                    return -1;
+                    return 0;
                 }
             }
         } else {
@@ -1429,9 +1428,6 @@ fn decode_coefs<BD: BitDepth>(
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(ref hashmap) = hashmap {
         let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
-        //let hash = hashcoeffs(cf.into_vec_i32(), 0, 0, 0);
-
-        println!("HASH {:?}", hash);
 
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
@@ -1439,21 +1435,10 @@ fn decode_coefs<BD: BitDepth>(
             res_ctx: *res_ctx,
             txtp: *txtp,
         };
-        //println!("CF {:?}\nVEC {:?}", cf, hash_object.vec);
         let mut hashmap_lock = hashmap.lock();
-        println!("{}", hashmap_lock.len());
         hashmap_lock.insert(hash, hash_object);
-        println!("{}", hashmap_lock.len());
     }
 
-    {
-        if let Some(ref hashmap) = hashmap {
-            let hashmap_lock = hashmap.lock();
-            println!("{}", hashmap_lock.len());
-        }
-    }
-
-    //println!("CF {:?}", cf);
     // context
     res_eob
 }
