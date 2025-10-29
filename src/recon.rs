@@ -650,14 +650,6 @@ fn decode_coefs<BD: BitDepth>(
         &mut ts_c.cdf.coef.marker[t_dim.ctx as usize][mctx.get() as usize],
     );
 
-    print!(
-        "{}",
-        match marker {
-            true => 0,
-            _ => 1,
-        }
-    );
-
     if marker {
         let mut hash: u32 = 0;
         for _ in 0..32 {
