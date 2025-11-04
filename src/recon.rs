@@ -26,8 +26,8 @@ use crate::{
         dav1d::{
             dav1d::Rav1dInloopFilterType,
             headers::{
-                Rav1dFrameType, Rav1dPixelLayout, Rav1dPixelLayoutSubSampled,
-                Rav1dWarpedMotionParams, Rav1dWarpedMotionType,
+                Rav1dPixelLayout, Rav1dPixelLayoutSubSampled, Rav1dWarpedMotionParams,
+                Rav1dWarpedMotionType,
             },
             picture::{Rav1dPictureDataComponent, Rav1dPictureDataComponentOffset},
         },
@@ -520,7 +520,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> HashType {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize) -> HashType {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -529,8 +529,7 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> HashTy
         }
     });
     eob.hash(&mut hasher);
-    width.hash(&mut hasher);
-    height.hash(&mut hasher);
+    tx_size.hash(&mut hasher);
     let hash = hasher.finish();
     (hash & (HASHMASK as u64))
         .try_into()
@@ -787,7 +786,6 @@ fn decode_coefs<BD: BitDepth>(
             txtp
         }
     };
-
     // find end-of-block (eob)
     let tx2dszctx =
         cmp::min(t_dim.lw, TxfmSize::S32x32 as u8) + cmp::min(t_dim.lh, TxfmSize::S32x32 as u8);
@@ -1422,8 +1420,19 @@ fn decode_coefs<BD: BitDepth>(
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(ref hashmap) = hashmap {
-        let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
+        /*let hash = hashcoeffs(cf.into_vec_i32(), eob, sw, sh);
+        println!(
+            "HASH {} EOB {} WIDTH {} HEIGHT {} CF {:?}",
+            hash, eob, sw, sh, cf
+        );*/
+        let hash = hashcoeffs(cf.into_vec_i32(), eob, tx as usize);
+        /*
+                println!(
+                    "HASH {} EOB {} TXSIZE {} CF {:?}",
+                    hash, eob, tx as usize, cf
+                );
 
+        */
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
             eob: res_eob,

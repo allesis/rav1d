@@ -751,8 +751,8 @@ impl Rav1dFrameContext {
     }
 }
 
-pub type HashType = u16;
-pub const HASHMASK: HashType = 0xFFFF;
+pub type HashType = u32;
+pub const HASHMASK: HashType = 0xFFFFFFFF;
 
 #[derive(Default)]
 #[repr(C)]
