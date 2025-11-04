@@ -19,7 +19,7 @@ use crate::{
     in_range::InRange,
     include::{
         common::{
-            bitdepth::{AsPrimitive, BPC, BitDepth, ToPrimitive},
+            bitdepth::{AsPrimitive, BitDepth, ToPrimitive, BPC},
             dump::{ac_dump, coef_dump, hex_dump, hex_dump_pic},
             intops::{apply_sign64, clip, ulog2},
         },
@@ -33,32 +33,33 @@ use crate::{
         },
     },
     internal::{
-        Bxy, Cf, CodedBlockInfo, HashObject, Rav1dContext, Rav1dFrameData, Rav1dTaskContext,
-        Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
+        Bxy, Cf, CodedBlockInfo, HashObject, HashType, Rav1dContext, Rav1dFrameData,
+        Rav1dTaskContext, Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
+        HASHMASK,
     },
     intra_edge::EdgeFlags,
     ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
     levels::{
-        Av1Block, Av1BlockInter, Av1BlockIntra, Av1BlockIntraInter, BlockSize, CFL_PRED,
-        CompInterType, DC_PRED, DCT_DCT, FILTER_PRED, Filter2d, GLOBALMV, GLOBALMV_GLOBALMV, IDTX,
-        InterIntraPredMode, InterIntraType, IntraPredMode, MotionMode, Mv, SMOOTH_PRED, TxClass,
-        TxfmSize, TxfmType, WHT_WHT,
+        Av1Block, Av1BlockInter, Av1BlockIntra, Av1BlockIntraInter, BlockSize, CompInterType,
+        Filter2d, InterIntraPredMode, InterIntraType, IntraPredMode, MotionMode, Mv, TxClass,
+        TxfmSize, TxfmType, CFL_PRED, DCT_DCT, DC_PRED, FILTER_PRED, GLOBALMV, GLOBALMV_GLOBALMV,
+        IDTX, SMOOTH_PRED, WHT_WHT,
     },
     lf_apply::{rav1d_copy_lpf, rav1d_loopfilter_sbrow_cols, rav1d_loopfilter_sbrow_rows},
     lr_apply::rav1d_lr_sbrow,
     msac::{
-        MsacContext, rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi,
-        rav1d_msac_decode_bools, rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt4,
-        rav1d_msac_decode_symbol_adapt8, rav1d_msac_decode_symbol_adapt16,
+        rav1d_msac_decode_bool_adapt, rav1d_msac_decode_bool_equi, rav1d_msac_decode_bools,
+        rav1d_msac_decode_hi_tok, rav1d_msac_decode_symbol_adapt16,
+        rav1d_msac_decode_symbol_adapt4, rav1d_msac_decode_symbol_adapt8, MsacContext,
     },
     picture::Rav1dThreadPicture,
     pixels::Pixels as _,
     scan::DAV1D_SCANS,
     strided::Strided as _,
     tables::{
-        DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE, DAV1D_LO_CTX_OFFSETS, DAV1D_SKIP_CTX,
-        DAV1D_TX_TYPE_CLASS, DAV1D_TX_TYPES_PER_SET, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE,
-        LoCtxOffset, TxfmInfo,
+        LoCtxOffset, TxfmInfo, DAV1D_FILTER_2D, DAV1D_FILTER_MODE_TO_Y_MODE, DAV1D_LO_CTX_OFFSETS,
+        DAV1D_SKIP_CTX, DAV1D_TXFM_DIMENSIONS, DAV1D_TXTP_FROM_UVMODE, DAV1D_TX_TYPES_PER_SET,
+        DAV1D_TX_TYPE_CLASS,
     },
     wedge::{DAV1D_II_MASKS, DAV1D_WEDGE_MASKS},
     with_offset::WithOffset,
@@ -519,7 +520,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> HashType {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -531,7 +532,7 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    (hash & 0xFFFFFFFF)
+    (hash & HASHMASK as u64)
         .try_into()
         .expect("FAILED TO CONVERT HASH")
 }
@@ -651,15 +652,18 @@ fn decode_coefs<BD: BitDepth>(
     );
 
     if marker {
-        let mut hash: u32 = 0;
-        for _ in 0..32 {
+        let mut hash: HashType = 0;
+        println!("{}", size_of::<HashType>());
+        for _ in 0..size_of::<HashType>() {
             hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as u32;
+            let bit = rav1d_msac_decode_bools(&mut ts_c.msac, 1);
+            hash |= bit as HashType;
         }
+
+        println!("{}", hash);
         let hash = hash;
         //println!("Found hash = {}", hash);
-        if let Some(hashmap) = hashmap.clone() {
+        {
             //println!("Let some hash = {}", hash);
             let hashmap_lock = hashmap.lock(); // ("FAILED TO LOCK HASHMAP");
 
@@ -678,7 +682,7 @@ fn decode_coefs<BD: BitDepth>(
                     cf.insert_vec(&hash_object.vec);
                     *res_ctx = hash_object.res_ctx;
                     *txtp = hash_object.txtp;
-                    println!("Used a hash");
+                    //println!("Used a hash");
                     return hash_object.eob;
                 }
                 None => {
@@ -688,23 +692,16 @@ fn decode_coefs<BD: BitDepth>(
                     // If it is, we panic, otherwise return as a empty frame and try to keep going
                     //
                     // For now we just panic
-                    /*
                     panic!(
                         "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}",
                         hash
                     );
-                    */
-                    return 0;
+                    //return 0;
                 }
             }
-        } else {
-            // This is bad!
-            // We got a marker to read, but we dont have a hashmap to read from!
-            // This is a horrible place to be in
-            // We should panic!
-            panic!("NEEDED TO READ A HASH BUT HAVE NO HASHMAP TO READ FROM");
         }
     }
+
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
     *txtp = match &b.ii {
@@ -759,7 +756,11 @@ fn decode_coefs<BD: BitDepth>(
                     &mut ts_c.cdf.m.txtp_inter3[t_dim.min as usize],
                 );
                 idx = bool_idx as u8;
-                if bool_idx { DCT_DCT } else { IDTX }
+                if bool_idx {
+                    DCT_DCT
+                } else {
+                    IDTX
+                }
             } else if t_dim.min == TxfmSize::S16x16 as _ {
                 idx = rav1d_msac_decode_symbol_adapt16(
                     &mut ts_c.msac,
@@ -1418,8 +1419,8 @@ fn decode_coefs<BD: BitDepth>(
     let res_eob = eob as i32;
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
-    if let Some(ref hashmap) = hashmap {
-        let hash = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
+    {
+        let hash: HashType = hashcoeffs(cf.into_vec_i32(), eob, 0, 0);
 
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),

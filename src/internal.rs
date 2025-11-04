@@ -4,8 +4,8 @@ use std::{
     mem,
     ops::{Deref, Range},
     sync::{
-        Arc, OnceLock,
         atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
+        Arc, OnceLock,
     },
     thread::JoinHandle,
 };
@@ -20,13 +20,13 @@ use crate::{
     align::{Align16, Align64, AlignedVec2, AlignedVec64},
     cdef::Rav1dCdefDSPContext,
     cdf::{CdfContext, CdfThreadContext},
-    cpu::{CpuFlags, rav1d_get_cpu_flags},
+    cpu::{rav1d_get_cpu_flags, CpuFlags},
     disjoint_mut::{DisjointImmutGuard, DisjointMut, DisjointMutArcSlice, DisjointMutGuard},
     env::BlockContext,
     error::Rav1dError,
-    filmgrain::{GRAIN_HEIGHT, GRAIN_WIDTH, Rav1dFilmGrainDSPContext},
+    filmgrain::{Rav1dFilmGrainDSPContext, GRAIN_HEIGHT, GRAIN_WIDTH},
     include::{
-        common::bitdepth::{BPC, BitDepth, BitDepth8, BitDepth16},
+        common::bitdepth::{BitDepth, BitDepth16, BitDepth8, BPC},
         dav1d::{
             common::Rav1dDataProps,
             data::Rav1dData,
@@ -53,12 +53,12 @@ use crate::{
     picture::{PictureFlags, Rav1dThreadPicture},
     pool::MemPool,
     recon::{
-        BackupIpredEdgeFn, CopyPalBlockFn, FilterSbrowFn, ReadCoefBlocksFn, ReadPalPlaneFn,
-        ReadPalUVFn, ReconBInterFn, ReconBIntraFn, rav1d_backup_ipred_edge,
-        rav1d_copy_pal_block_uv, rav1d_copy_pal_block_y, rav1d_filter_sbrow,
-        rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_deblock_cols, rav1d_filter_sbrow_deblock_rows,
-        rav1d_filter_sbrow_lr, rav1d_filter_sbrow_resize, rav1d_read_coef_blocks,
-        rav1d_read_pal_plane, rav1d_read_pal_uv, rav1d_recon_b_inter, rav1d_recon_b_intra,
+        rav1d_backup_ipred_edge, rav1d_copy_pal_block_uv, rav1d_copy_pal_block_y,
+        rav1d_filter_sbrow, rav1d_filter_sbrow_cdef, rav1d_filter_sbrow_deblock_cols,
+        rav1d_filter_sbrow_deblock_rows, rav1d_filter_sbrow_lr, rav1d_filter_sbrow_resize,
+        rav1d_read_coef_blocks, rav1d_read_pal_plane, rav1d_read_pal_uv, rav1d_recon_b_inter,
+        rav1d_recon_b_intra, BackupIpredEdgeFn, CopyPalBlockFn, FilterSbrowFn, ReadCoefBlocksFn,
+        ReadPalPlaneFn, ReadPalUVFn, ReconBInterFn, ReconBIntraFn,
     },
     refmvs::{Rav1dRefmvsDSPContext, RefMvsFrame, RefMvsTemporalBlock, RefmvsTile},
     relaxed_atomic::RelaxedAtomic,
@@ -396,7 +396,7 @@ pub struct Rav1dContext {
 
     pub(crate) picture_pool: Arc<MemPool<u8>>,
 
-    pub(crate) hashmap: Option<Arc<Mutex<HashMap<u32, HashObject>>>>,
+    pub(crate) hashmap: Arc<Mutex<HashMap<HashType, HashObject>>>,
 }
 
 // SAFETY:
@@ -751,6 +751,9 @@ impl Rav1dFrameContext {
     }
 }
 
+pub type HashType = u32;
+pub const HASHMASK: HashType = 0xFFFFFFFF;
+
 #[derive(Default)]
 #[repr(C)]
 pub(crate) struct Rav1dFrameData {
@@ -807,7 +810,7 @@ pub(crate) struct Rav1dFrameData {
     pub frame_thread: Rav1dFrameContextFrameThread,
     pub lf: Rav1dFrameContextLf,
     pub lowest_pixel_mem: DisjointMut<Vec<[[c_int; 2]; 7]>>,
-    pub hashmap: Option<Arc<Mutex<HashMap<u32, HashObject>>>>,
+    pub hashmap: Arc<Mutex<HashMap<HashType, HashObject>>>,
 }
 
 impl Rav1dFrameData {
@@ -825,7 +828,7 @@ impl Rav1dFrameData {
     }
 
     pub fn add_hashmap(&mut self) {
-        self.hashmap = Some(Arc::new(Mutex::new(HashMap::new())));
+        self.hashmap = Arc::new(Mutex::new(HashMap::new()));
     }
 }
 

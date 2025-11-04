@@ -416,7 +416,7 @@ pub(crate) fn rav1d_open(s: &Rav1dSettings) -> Rav1dResult<Arc<Rav1dContext>> {
         task_thread,
         state,
         tc,
-        hashmap: Some(Arc::new(Mutex::new(HashMap::new()))),
+        hashmap: Arc::new(Mutex::new(HashMap::new())),
         ..Default::default()
     };
 
