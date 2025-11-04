@@ -33,9 +33,8 @@ use crate::{
         },
     },
     internal::{
-        Bxy, Cf, CodedBlockInfo, HashObject, HashType, Rav1dContext, Rav1dFrameData,
-        Rav1dTaskContext, Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
-        HASHMASK,
+        Bxy, Cf, CodedBlockInfo, HashObject, Rav1dContext, Rav1dFrameData, Rav1dTaskContext,
+        Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
     },
     intra_edge::EdgeFlags,
     ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
@@ -760,7 +759,11 @@ fn decode_coefs<BD: BitDepth>(
                     &mut ts_c.cdf.m.txtp_inter3[t_dim.min as usize],
                 );
                 idx = bool_idx as u8;
-                if bool_idx { DCT_DCT } else { IDTX }
+                if bool_idx {
+                    DCT_DCT
+                } else {
+                    IDTX
+                }
             } else if t_dim.min == TxfmSize::S16x16 as _ {
                 idx = rav1d_msac_decode_symbol_adapt16(
                     &mut ts_c.msac,
