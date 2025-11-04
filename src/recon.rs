@@ -35,7 +35,7 @@ use crate::{
     internal::{
         Bxy, Cf, CodedBlockInfo, HashObject, HashType, Rav1dContext, Rav1dFrameData,
         Rav1dTaskContext, Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
-        HASHMASK,
+        HASHMASK, HASHSIZE,
     },
     intra_edge::EdgeFlags,
     ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
@@ -652,7 +652,8 @@ fn decode_coefs<BD: BitDepth>(
 
     if marker {
         let mut hash: HashType = 0;
-        for _ in 0..(size_of::<HashType>() * 8) {
+        //for _ in 0..(size_of::<HashType>() * 8) {
+        for _ in 0..HASHSIZE {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
             hash |= bit as HashType;

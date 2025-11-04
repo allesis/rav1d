@@ -43,7 +43,7 @@ use crate::{
     itx::Rav1dInvTxfmDSPContext,
     levels::{Av1Block, Filter2d, SegmentId, TxfmType, WHT_WHT},
     lf_mask::{Av1Filter, Av1FilterLUT, Av1Restoration, Av1RestorationUnit},
-    log::Rav1dLogger,
+    log::{self, Rav1dLogger},
     loopfilter::Rav1dLoopFilterDSPContext,
     looprestoration::Rav1dLoopRestorationDSPContext,
     lr_apply::LrRestorePlanes,
@@ -752,7 +752,8 @@ impl Rav1dFrameContext {
 }
 
 pub type HashType = u32;
-pub const HASHMASK: HashType = 0xFFFFFFFF;
+pub const HASHMASK: HashType = 0xFFFFFF;
+pub const HASHSIZE: u32 = u32::BITS - HASHMASK.leading_zeros();
 
 #[derive(Default)]
 #[repr(C)]
