@@ -520,7 +520,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> HashType {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -532,7 +532,7 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    (hash & 0xFFFFFFFF)
+    (hash & HASHMASK as u64)
         .try_into()
         .expect("FAILED TO CONVERT HASH")
 }
@@ -652,11 +652,11 @@ fn decode_coefs<BD: BitDepth>(
     );
 
     if marker {
-        let mut hash: u32 = 0;
-        for _ in 0..32 {
+        let mut hash: HashType = 0;
+        for _ in 0..size_of::<HashType>() {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as u32;
+            hash |= bit as HashType;
         }
         let hash = hash;
         //println!("Found hash = {}", hash);

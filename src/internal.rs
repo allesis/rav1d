@@ -396,7 +396,7 @@ pub struct Rav1dContext {
 
     pub(crate) picture_pool: Arc<MemPool<u8>>,
 
-    pub(crate) hashmap: Option<Arc<Mutex<HashMap<u32, HashObject>>>>,
+    pub(crate) hashmap: Arc<Mutex<HashMap<HashType, HashObject>>>,
 }
 
 // SAFETY:
@@ -751,6 +751,9 @@ impl Rav1dFrameContext {
     }
 }
 
+pub type HashType = u32;
+pub const HASHMASK: HashType = 0xFFFFFFFF;
+
 #[derive(Default)]
 #[repr(C)]
 pub(crate) struct Rav1dFrameData {
@@ -807,7 +810,7 @@ pub(crate) struct Rav1dFrameData {
     pub frame_thread: Rav1dFrameContextFrameThread,
     pub lf: Rav1dFrameContextLf,
     pub lowest_pixel_mem: DisjointMut<Vec<[[c_int; 2]; 7]>>,
-    pub hashmap: Option<Arc<Mutex<HashMap<u32, HashObject>>>>,
+    pub hashmap: Arc<Mutex<HashMap<HashType, HashObject>>>,
 }
 
 impl Rav1dFrameData {
