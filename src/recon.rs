@@ -33,8 +33,9 @@ use crate::{
         },
     },
     internal::{
-        Bxy, Cf, CodedBlockInfo, HashObject, Rav1dContext, Rav1dFrameData, Rav1dTaskContext,
-        Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
+        Bxy, Cf, CodedBlockInfo, HashObject, HashType, Rav1dContext, Rav1dFrameData,
+        Rav1dTaskContext, Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
+        HASHMASK,
     },
     intra_edge::EdgeFlags,
     ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
@@ -519,7 +520,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> HashType {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -531,7 +532,7 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, width: usize, height: usize) -> u32 {
     width.hash(&mut hasher);
     height.hash(&mut hasher);
     let hash = hasher.finish();
-    (hash & 0xFFFFFFFF)
+    (hash & (HASHMASK as u64))
         .try_into()
         .expect("FAILED TO CONVERT HASH")
 }
@@ -651,11 +652,11 @@ fn decode_coefs<BD: BitDepth>(
     );
 
     if marker {
-        let mut hash: u32 = 0;
-        for _ in 0..32 {
+        let mut hash: HashType = 0;
+        for _ in 0..(size_of::<HashType>() * 8) {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as u32;
+            hash |= bit as HashType;
         }
         let hash = hash;
         //println!("Found hash = {}", hash);
@@ -688,13 +689,11 @@ fn decode_coefs<BD: BitDepth>(
                     // If it is, we panic, otherwise return as a empty frame and try to keep going
                     //
                     // For now we just panic
-                    /*
                     panic!(
                         "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}",
                         hash
                     );
-                    */
-                    return 0;
+                    //return 0;
                 }
             }
         } else {
