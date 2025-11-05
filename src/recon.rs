@@ -35,7 +35,7 @@ use crate::{
     internal::{
         Bxy, Cf, CodedBlockInfo, HashObject, HashType, Rav1dContext, Rav1dFrameData,
         Rav1dTaskContext, Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
-        HASHMASK, HASHSIZE,
+        HASHMASK,
     },
     intra_edge::EdgeFlags,
     ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
@@ -520,7 +520,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize) -> HashType {
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16) -> HashType {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -529,7 +529,6 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16, tx_size: usize) -> HashType {
         }
     });
     eob.hash(&mut hasher);
-    tx_size.hash(&mut hasher);
     let hash = hasher.finish();
     (hash & (HASHMASK as u64))
         .try_into()
@@ -652,8 +651,7 @@ fn decode_coefs<BD: BitDepth>(
 
     if marker {
         let mut hash: HashType = 0;
-        //for _ in 0..(size_of::<HashType>() * 8) {
-        for _ in 0..HASHSIZE {
+        for _ in 0..HashType::BITS {
             hash <<= 1;
             let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
             hash |= bit as HashType;
@@ -662,38 +660,40 @@ fn decode_coefs<BD: BitDepth>(
         //println!("Found hash = {}", hash);
         if let Some(hashmap) = hashmap.clone() {
             //println!("Let some hash = {}", hash);
-            let hashmap_lock = hashmap.lock(); // ("FAILED TO LOCK HASHMAP");
-
-            /*
-            println!(
-                "{:?}",
-                hashmap_lock
-                    .iter()
-                    .map(|(hash, hash_object)| { hash })
-                    .collect::<Vec<_>>()
-            );
-            */
-            match hashmap_lock.get(&hash) {
-                Some(hash_object) => {
-                    //println!("USED A HASH TO DECODE A TILE!");
-                    cf.insert_vec(&hash_object.vec);
-                    *res_ctx = hash_object.res_ctx;
-                    *txtp = hash_object.txtp;
-                    println!("Used a hash");
-                    return hash_object.eob;
-                }
-                None => {
-                    // This is also bad, we have a hash but it doesnt reference anything!
-                    // We can either panic, or try our best
-                    // TODO: Add a check for strict standards following
-                    // If it is, we panic, otherwise return as a empty frame and try to keep going
-                    //
-                    // For now we just panic
-                    panic!(
-                        "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}",
-                        hash
-                    );
-                    //return 0;
+            let hashmaps_lock = hashmap.lock();
+            let hashmap_lock = hashmaps_lock.get(tx as usize); // ("FAILED TO LOCK HASHMAP");
+            if let Some(hashmap_lock) = hashmap_lock {
+                /*
+                println!(
+                    "{:?}",
+                    hashmap_lock
+                        .iter()
+                        .map(|(hash, hash_object)| { hash })
+                        .collect::<Vec<_>>()
+                );
+                */
+                match hashmap_lock.get(&hash) {
+                    Some(hash_object) => {
+                        //println!("USED A HASH TO DECODE A TILE!");
+                        cf.insert_vec(&hash_object.vec);
+                        *res_ctx = hash_object.res_ctx;
+                        *txtp = hash_object.txtp;
+                        println!("Used a hash");
+                        return hash_object.eob;
+                    }
+                    None => {
+                        // This is also bad, we have a hash but it doesnt reference anything!
+                        // We can either panic, or try our best
+                        // TODO: Add a check for strict standards following
+                        // If it is, we panic, otherwise return as a empty frame and try to keep going
+                        //
+                        // For now we just panic
+                        panic!(
+                            "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}",
+                            hash
+                        );
+                        //return 0;
+                    }
                 }
             }
         } else {
@@ -1420,13 +1420,13 @@ fn decode_coefs<BD: BitDepth>(
     let res_eob = eob as i32;
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
-    if let Some(ref hashmap) = hashmap {
+    if let Some(hashmap) = hashmap {
         /*let hash = hashcoeffs(cf.into_vec_i32(), eob, sw, sh);
         println!(
             "HASH {} EOB {} WIDTH {} HEIGHT {} CF {:?}",
             hash, eob, sw, sh, cf
         );*/
-        let hash = hashcoeffs(cf.into_vec_i32(), eob, tx as usize);
+        let hash = hashcoeffs(cf.into_vec_i32(), eob);
         /*
                 println!(
                     "HASH {} EOB {} TXSIZE {} CF {:?}",
@@ -1440,8 +1440,13 @@ fn decode_coefs<BD: BitDepth>(
             res_ctx: *res_ctx,
             txtp: *txtp,
         };
-        let mut hashmap_lock = hashmap.lock();
-        hashmap_lock.insert(hash, hash_object);
+        let mut hashmaps_lock = hashmap.lock();
+        let hashmap_lock = hashmaps_lock.get_mut(tx as usize);
+        if let Some(hashmap_lock) = hashmap_lock {
+            hashmap_lock.insert(hash, hash_object);
+        }
+    } else {
+        panic!("DIDNT FIND A HASHMAP");
     }
 
     // context

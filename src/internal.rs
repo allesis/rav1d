@@ -41,7 +41,7 @@ use crate::{
     },
     ipred::Rav1dIntraPredDSPContext,
     itx::Rav1dInvTxfmDSPContext,
-    levels::{Av1Block, Filter2d, SegmentId, TxfmType, WHT_WHT},
+    levels::{Av1Block, Filter2d, SegmentId, TxfmSize, TxfmType, WHT_WHT},
     lf_mask::{Av1Filter, Av1FilterLUT, Av1Restoration, Av1RestorationUnit},
     log::Rav1dLogger,
     loopfilter::Rav1dLoopFilterDSPContext,
@@ -396,7 +396,7 @@ pub struct Rav1dContext {
 
     pub(crate) picture_pool: Arc<MemPool<u8>>,
 
-    pub(crate) hashmap: Option<Arc<Mutex<HashMap<HashType, HashObject>>>>,
+    pub(crate) hashmap: Option<HashMapVecType>,
 }
 
 // SAFETY:
@@ -751,9 +751,11 @@ impl Rav1dFrameContext {
     }
 }
 
-pub type HashType = u32;
-pub const HASHMASK: HashType = HashType::MAX;
-pub const HASHSIZE: u32 = u32::BITS - HASHMASK.leading_zeros();
+pub type HashType = u16;
+pub const HASHMASK: HashType = 0xFFFF;
+pub type HashMapType = HashMap<HashType, HashObject>;
+// FIX: DONT HARD CODE THIS
+pub type HashMapVecType = Arc<Mutex<[HashMapType; 19]>>;
 
 #[derive(Default)]
 #[repr(C)]
@@ -811,7 +813,7 @@ pub(crate) struct Rav1dFrameData {
     pub frame_thread: Rav1dFrameContextFrameThread,
     pub lf: Rav1dFrameContextLf,
     pub lowest_pixel_mem: DisjointMut<Vec<[[c_int; 2]; 7]>>,
-    pub hashmap: Option<Arc<Mutex<HashMap<HashType, HashObject>>>>,
+    pub hashmap: Option<HashMapVecType>,
 }
 
 impl Rav1dFrameData {
@@ -829,7 +831,8 @@ impl Rav1dFrameData {
     }
 
     pub fn add_hashmap(&mut self) {
-        self.hashmap = Some(Arc::new(Mutex::new(HashMap::new())));
+        // FIX: DONT HARD CODE THIS EITHER
+        self.hashmap = Some(Arc::new(Mutex::new(Default::default())));
     }
 }
 
