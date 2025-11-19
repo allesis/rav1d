@@ -17,5 +17,5 @@ test-convert VIDEO: (test VIDEO) (convert VIDEO) (cleanup VIDEO)
 	./target/release/dav1d -i $HOME/video/{{VIDEO}}.ivf -o $HOME/video/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
 cleanup VIDEO:
 	rm $HOME/video/{{VIDEO}}-decode.y4m
-convert VIDEO: release (test VIDEO) && (cleanup VIDEO)
+convert VIDEO: (test VIDEO) && (cleanup VIDEO)
 	ffmpeg -i $HOME/video/{{VIDEO}}-decode.y4m $HOME/video/{{VIDEO}}.mp4
