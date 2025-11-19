@@ -752,10 +752,9 @@ impl Rav1dFrameContext {
 }
 
 pub type HashType = u16;
-pub const HASHMASK: HashType = 0xFFFF;
+pub const HASHMASK: HashType = HashType::MAX;
 pub type HashMapType = HashMap<HashType, HashObject>;
-// FIX: DONT HARD CODE THIS
-pub type HashMapVecType = Arc<Mutex<[HashMapType; 19]>>;
+pub type HashMapVecType = Arc<Mutex<[HashMapType; TxfmSize::_NUM_RECT]>>;
 
 #[derive(Default)]
 #[repr(C)]

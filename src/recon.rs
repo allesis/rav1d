@@ -653,16 +653,16 @@ fn decode_coefs<BD: BitDepth>(
         let mut hash: HashType = 0;
         for _ in 0..HashType::BITS {
             hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac);
-            hash |= bit as HashType;
+            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac) as HashType;
+            hash |= bit;
         }
         let hash = hash;
         //println!("Found hash = {}", hash);
         if let Some(hashmap) = hashmap.clone() {
             //println!("Let some hash = {}", hash);
             let hashmaps_lock = hashmap.lock();
-            let hashmap_lock = hashmaps_lock.get(tx as usize); // ("FAILED TO LOCK HASHMAP");
-            if let Some(hashmap_lock) = hashmap_lock {
+            //   println!("TX used: {:?}", tx);
+            if let Some(hashmap_lock) = hashmaps_lock.get(bs as usize) {
                 /*
                 println!(
                     "{:?}",
@@ -678,7 +678,7 @@ fn decode_coefs<BD: BitDepth>(
                         cf.insert_vec(&hash_object.vec);
                         *res_ctx = hash_object.res_ctx;
                         *txtp = hash_object.txtp;
-                        println!("Used a hash");
+                        //             println!("Used a hash");
                         return hash_object.eob;
                     }
                     None => {
@@ -689,8 +689,8 @@ fn decode_coefs<BD: BitDepth>(
                         //
                         // For now we just panic
                         panic!(
-                            "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}",
-                            hash
+                            "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}\nTX {:?}",
+                            hash, tx as usize
                         );
                         //return 0;
                     }
@@ -1427,6 +1427,9 @@ fn decode_coefs<BD: BitDepth>(
             hash, eob, sw, sh, cf
         );*/
         let hash = hashcoeffs(cf.into_vec_i32(), eob);
+        if hash == 36079 {
+            println!("Found correct combo and adding it to hashmap");
+        }
         /*
                 println!(
                     "HASH {} EOB {} TXSIZE {} CF {:?}",
@@ -1441,8 +1444,8 @@ fn decode_coefs<BD: BitDepth>(
             txtp: *txtp,
         };
         let mut hashmaps_lock = hashmap.lock();
-        let hashmap_lock = hashmaps_lock.get_mut(tx as usize);
-        if let Some(hashmap_lock) = hashmap_lock {
+        let hashmap_lock = hashmaps_lock.get_mut(bs as usize);
+        if let Some(mut hashmap_lock) = hashmap_lock {
             hashmap_lock.insert(hash, hash_object);
         }
     } else {
