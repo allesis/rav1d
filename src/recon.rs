@@ -596,6 +596,9 @@ fn decode_coefs<BD: BitDepth>(
             f.debug_struct("Cf").field("coefs_i32", &values).finish()
         }
     }
+
+    //println!("BlockSize: {}\nTXSize: {}", bs as usize, tx as usize);
+
     let hashmap = f.hashmap.clone();
     let dc_sign_ctx;
     let dc_sign;
@@ -605,6 +608,7 @@ fn decode_coefs<BD: BitDepth>(
     let frame_hdr = &***f.frame_hdr.as_ref().unwrap();
     let lossless = frame_hdr.segmentation.lossless[b.seg_id.get()];
     let t_dim = &DAV1D_TXFM_DIMENSIONS[tx as usize];
+    //println!("TDIM {:?}", t_dim.sub);
     #[expect(clippy::overly_complex_bool_expr, reason = "used for debugging")]
     let dbg = plane != 0 && dbg_block_info && false;
 
@@ -662,7 +666,7 @@ fn decode_coefs<BD: BitDepth>(
             //println!("Let some hash = {}", hash);
             let hashmaps_lock = hashmap.lock();
             //   println!("TX used: {:?}", tx);
-            if let Some(hashmap_lock) = hashmaps_lock.get(bs as usize) {
+            if let Some(hashmap_lock) = hashmaps_lock.get(tx as usize) {
                 /*
                 println!(
                     "{:?}",
@@ -1427,16 +1431,15 @@ fn decode_coefs<BD: BitDepth>(
             hash, eob, sw, sh, cf
         );*/
         let hash = hashcoeffs(cf.into_vec_i32(), eob);
-        if hash == 36079 {
-            println!("Found correct combo and adding it to hashmap");
-        }
-        /*
-                println!(
-                    "HASH {} EOB {} TXSIZE {} CF {:?}",
-                    hash, eob, tx as usize, cf
-                );
+        //let stream_bs = <u8 as Into<BlockSize>>::into(stream_tx_size);
+        //println!("{} == {}", tx as usize, stream_bs as usize);
 
+        /*       println!(
+                   "HASH {} EOB {} TXSIZE {} CF {:?}",
+                   hash, eob, tx as usize, cf
+               );
         */
+
         let hash_object = HashObject {
             vec: cf.into_vec_i32(),
             eob: res_eob,
@@ -1444,9 +1447,11 @@ fn decode_coefs<BD: BitDepth>(
             txtp: *txtp,
         };
         let mut hashmaps_lock = hashmap.lock();
-        let hashmap_lock = hashmaps_lock.get_mut(bs as usize);
-        if let Some(mut hashmap_lock) = hashmap_lock {
+        let hashmap_lock = hashmaps_lock.get_mut(tx as usize);
+        if let Some(hashmap_lock) = hashmap_lock {
             hashmap_lock.insert(hash, hash_object);
+        } else {
+            panic!("FAILED");
         }
     } else {
         panic!("DIDNT FIND A HASHMAP");

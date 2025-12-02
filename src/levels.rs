@@ -238,6 +238,65 @@ pub enum BlockSize {
     Bs4x4 = 21,
 }
 
+impl BlockSize {
+    pub fn get_wh(self) -> (u8, u8) {
+        match self {
+            Self::Bs128x128 => (128, 128),
+            Self::Bs128x64 => (64, 64),
+            Self::Bs64x128 => (64, 128),
+            Self::Bs64x64 => (64, 64),
+            Self::Bs64x32 => (64, 32),
+            Self::Bs64x16 => (64, 16),
+            Self::Bs32x64 => (32, 64),
+            Self::Bs32x32 => (32, 32),
+            Self::Bs32x16 => (32, 16),
+            Self::Bs32x8 => (32, 8),
+            Self::Bs16x64 => (16, 64),
+            Self::Bs16x32 => (16, 32),
+            Self::Bs16x16 => (16, 16),
+            Self::Bs16x8 => (16, 8),
+            Self::Bs16x4 => (16, 4),
+            Self::Bs8x32 => (8, 32),
+            Self::Bs8x16 => (8, 16),
+            Self::Bs8x8 => (8, 8),
+            Self::Bs8x4 => (8, 4),
+            Self::Bs4x16 => (4, 16),
+            Self::Bs4x8 => (4, 8),
+            Self::Bs4x4 => (4, 4),
+        }
+    }
+}
+
+impl From<u8> for BlockSize {
+    fn from(i: u8) -> Self {
+        match i {
+            0 => Self::Bs128x128,
+            1 => Self::Bs128x64,
+            2 => Self::Bs64x128,
+            3 => Self::Bs64x64,
+            4 => Self::Bs64x32,
+            5 => Self::Bs64x16,
+            6 => Self::Bs32x64,
+            7 => Self::Bs32x32,
+            8 => Self::Bs32x16,
+            9 => Self::Bs32x8,
+            10 => Self::Bs16x64,
+            11 => Self::Bs16x32,
+            12 => Self::Bs16x16,
+            13 => Self::Bs16x8,
+            14 => Self::Bs16x4,
+            15 => Self::Bs8x32,
+            16 => Self::Bs8x16,
+            17 => Self::Bs8x8,
+            18 => Self::Bs8x4,
+            19 => Self::Bs4x16,
+            20 => Self::Bs4x8,
+            21 => Self::Bs4x4,
+            _ => panic!("INVALID CONVERSION"),
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, EnumCount, Default, FromRepr)]
 pub enum Filter2d {
     #[default]
