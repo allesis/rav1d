@@ -4,7 +4,7 @@ use std::{
     mem,
 };
 
-use libc::{fprintf, free, malloc, memcpy, strchr, strcmp, strlen, strncmp, ENOMEM, ENOPROTOOPT};
+use libc::{ENOMEM, ENOPROTOOPT, fprintf, free, malloc, memcpy, strchr, strcmp, strlen, strncmp};
 use rav1d::include::dav1d::picture::{Dav1dPicture, Dav1dPictureParameters};
 
 use crate::compat::stdio::{snprintf, stderr};

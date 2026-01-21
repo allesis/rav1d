@@ -1,3 +1,5 @@
+# TODO: Currently, you can only use Release, this is bad, fix
+DEFAULT_DIRECTORY := `echo ${DEFAULT_DIRECTORY:-"$HOME/video"}`
 all: clean release install
 clean:
 	cargo clean
@@ -9,13 +11,20 @@ install:
 	cp target/debug/dav1d $HOME/.local/bin/dav1d
 install-release:
 	cp target/release/dav1d $HOME/.local/bin/dav1d
-check VIDEO: release (test VIDEO)
-	ffprobe -v error -select_streams v:0 -show_entries stream=y4m -of default=nokey=1:noprint_wrappers=1 $HOME/video/{{VIDEO}}-decode.y4m
-test VIDEO: release
-	./target/release/dav1d -i $HOME/video/{{VIDEO}}.ivf -o $HOME/video/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
-test-convert VIDEO: (test VIDEO) (convert VIDEO) (cleanup VIDEO)
-	./target/release/dav1d -i $HOME/video/{{VIDEO}}.ivf -o $HOME/video/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
-cleanup VIDEO:
-	rm $HOME/video/{{VIDEO}}-decode.y4m
-convert VIDEO: release (test VIDEO) && (cleanup VIDEO)
-	ffmpeg -i $HOME/video/{{VIDEO}}-decode.y4m $HOME/video/{{VIDEO}}.mp4
+check VIDEO DIRECTORY=DEFAULT_DIRECTORY: release (test VIDEO)
+	ffprobe -v error -select_streams v:0 -show_entries stream=y4m -of default=nokey=1:noprint_wrappers=1 {{DIRECTORY}}/{{VIDEO}}-decode.y4m
+test VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
+test-release VIDEO DIRECTORY=DEFAULT_DIRECTORY: release
+	./target/release/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
+test-no-disable-reorder VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --threads 1
+test-no-disable-threads VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --framedelay 1
+test-no-disable-all VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m
+test-convert VIDEO DIRECTORY=DEFAULT_DIRECTORY: (test VIDEO DIRECTORY) (convert VIDEO DIRECTORY) && (cleanup VIDEO DIRECTORY)
+cleanup VIDEO DIRECTORY=DEFAULT_DIRECTORY:
+	rm {{DIRECTORY}}/{{VIDEO}}-decode.y4m
+convert VIDEO DIRECTORY=DEFAULT_DIRECTORY:
+	ffmpeg -i {{DIRECTORY}}/{{VIDEO}}-decode.y4m {{DIRECTORY}}/{{VIDEO}}.mp4

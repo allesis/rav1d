@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_double, c_int, c_uint, c_ulong, c_void, CStr},
+    ffi::{CStr, c_char, c_double, c_int, c_uint, c_ulong, c_void},
     process::exit,
     ptr::NonNull,
 };
@@ -17,10 +17,10 @@ use rav1d::{
     cpu::dav1d_set_cpu_flags_mask,
     dav1d_default_settings, dav1d_version,
     include::dav1d::dav1d::{
-        Dav1dDecodeFrameType, Dav1dInloopFilterType, Dav1dSettings, DAV1D_DECODEFRAMETYPE_ALL,
-        DAV1D_DECODEFRAMETYPE_INTRA, DAV1D_DECODEFRAMETYPE_KEY, DAV1D_DECODEFRAMETYPE_REFERENCE,
-        DAV1D_INLOOPFILTER_ALL, DAV1D_INLOOPFILTER_CDEF, DAV1D_INLOOPFILTER_DEBLOCK,
-        DAV1D_INLOOPFILTER_NONE, DAV1D_INLOOPFILTER_RESTORATION,
+        DAV1D_DECODEFRAMETYPE_ALL, DAV1D_DECODEFRAMETYPE_INTRA, DAV1D_DECODEFRAMETYPE_KEY,
+        DAV1D_DECODEFRAMETYPE_REFERENCE, DAV1D_INLOOPFILTER_ALL, DAV1D_INLOOPFILTER_CDEF,
+        DAV1D_INLOOPFILTER_DEBLOCK, DAV1D_INLOOPFILTER_NONE, DAV1D_INLOOPFILTER_RESTORATION,
+        Dav1dDecodeFrameType, Dav1dInloopFilterType, Dav1dSettings,
     },
 };
 
