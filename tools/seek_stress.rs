@@ -320,6 +320,8 @@ unsafe fn main_0(argc: c_int, argv: *const *mut c_char) -> c_int {
     };
     let mut total: c_uint = 0;
     let mut i_fps: [c_uint; 2] = [0; 2];
+    i_fps[0] = 30;
+    i_fps[1] = 1;
     let mut i_timebase: [c_uint; 2] = [0; 2];
     let timebase: c_double;
     let spf: c_double;
