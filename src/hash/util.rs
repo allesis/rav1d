@@ -1,6 +1,6 @@
 use libc::c_int;
 
-use super::{HashMapVecType, HashType};
+use super::{HashMapVecType, HashObject, HashType, hashcoeffs};
 use crate::msac::{MsacContext, rav1d_msac_decode_bool_equi};
 
 pub fn get_hash(msac: &mut MsacContext) -> HashType {
@@ -11,6 +11,36 @@ pub fn get_hash(msac: &mut MsacContext) -> HashType {
         hash |= bit;
     }
     return hash;
+}
+
+pub fn add_hash_object(
+    coefs: Vec<i32>,
+    eob: u16,
+    res_ctx: u8,
+    txtp: u8,
+    hashmap: HashMapVecType,
+    tx_size: usize,
+    block_size: usize,
+) {
+    let hash = hashcoeffs(coefs.clone(), eob);
+
+    let hash_object = HashObject {
+        vec: coefs,
+        eob: eob as i32,
+        res_ctx: res_ctx,
+        txtp: txtp,
+    };
+
+    let mut hashmaps_lock = hashmap.lock();
+    let hashmaps_lock_tx = hashmaps_lock
+        .get_mut(block_size)
+        .expect("BAD INDEX ON BLOCK SIZE");
+    let hashmap_lock = hashmaps_lock_tx.get_mut(tx_size);
+    if let Some(hashmap_lock) = hashmap_lock {
+        hashmap_lock.insert(hash, hash_object);
+    } else {
+        panic!("FAILED");
+    }
 }
 
 pub fn get_hash_object(

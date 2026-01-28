@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 pub mod util;
 
 use parking_lot::Mutex;
@@ -15,4 +19,19 @@ pub struct HashObject {
     pub eob: i32,
     pub res_ctx: u8,
     pub txtp: u8,
+}
+
+fn hashcoeffs(coeffs: Vec<i32>, eob: u16) -> HashType {
+    let mut hasher = DefaultHasher::new();
+    coeffs.iter().for_each(|coeff| {
+        if *coeff == 0 {
+        } else {
+            (*coeff).hash(&mut hasher)
+        }
+    });
+    //eob.hash(&mut hasher);
+    let hash = hasher.finish();
+    (hash & (HASHMASK as u64))
+        .try_into()
+        .expect("FAILED TO CONVERT HASH")
 }

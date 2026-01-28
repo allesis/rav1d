@@ -16,10 +16,7 @@ use crate::{
     cdef_apply::rav1d_cdef_brow,
     ctx::CaseSet,
     env::get_uv_inter_txtp,
-    hash::{
-        HASHMASK, HashObject, HashType,
-        util::{get_hash, get_hash_object},
-    },
+    hash::util::{add_hash_object, get_hash, get_hash_object},
     in_range::InRange,
     include::{
         common::{
@@ -517,25 +514,6 @@ fn get_lo_ctx(
 
     // `36 + 4 == 40`.
     LoCdfIndex::new(lo_ctx).unwrap() // Elided
-}
-
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16) -> HashType {
-    let mut hasher = DefaultHasher::new();
-    coeffs.iter().for_each(|coeff| {
-        if *coeff == 0 {
-        } else {
-            (*coeff).hash(&mut hasher)
-        }
-    });
-    eob.hash(&mut hasher);
-    let hash = hasher.finish();
-    (hash & (HASHMASK as u64))
-        .try_into()
-        .expect("FAILED TO CONVERT HASH")
 }
 
 fn decode_coefs<BD: BitDepth>(
@@ -1378,37 +1356,15 @@ fn decode_coefs<BD: BitDepth>(
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(hashmap) = hashmap {
-        /*let hash = hashcoeffs(cf.into_vec_i32(), eob, sw, sh);
-        println!(
-            "HASH {} EOB {} WIDTH {} HEIGHT {} CF {:?}",
-            hash, eob, sw, sh, cf
-        );*/
-        let hash = hashcoeffs(cf.into_vec_i32(), eob);
-        //let stream_bs = <u8 as Into<BlockSize>>::into(stream_tx_size);
-        //println!("{} == {}", tx as usize, stream_bs as usize);
-
-        /*       println!(
-                   "HASH {} EOB {} TXSIZE {} CF {:?}",
-                   hash, eob, tx as usize, cf
-               );
-        */
-
-        let hash_object = HashObject {
-            vec: cf.into_vec_i32(),
-            eob: res_eob,
-            res_ctx: *res_ctx,
-            txtp: *txtp,
-        };
-        let mut hashmaps_lock = hashmap.lock();
-        let hashmaps_lock_tx = hashmaps_lock
-            .get_mut(bs as usize)
-            .expect("BAD INDEX ON BLOCK SIZE");
-        let hashmap_lock = hashmaps_lock_tx.get_mut(tx as usize);
-        if let Some(hashmap_lock) = hashmap_lock {
-            hashmap_lock.insert(hash, hash_object);
-        } else {
-            panic!("FAILED");
-        }
+        add_hash_object(
+            cf.into_vec_i32(),
+            eob,
+            *res_ctx,
+            *txtp,
+            hashmap,
+            tx as usize,
+            bs as usize,
+        );
     } else {
         panic!("DIDNT FIND A HASHMAP");
     }
