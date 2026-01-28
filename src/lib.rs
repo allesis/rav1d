@@ -70,6 +70,7 @@ compile_error!(
     "No bitdepths enabled. Enable one or more of the following features: `bitdepth_8`, `bitdepth_16`"
 );
 
+pub mod hash;
 pub mod include {
     pub mod common {
         pub(crate) mod attributes;

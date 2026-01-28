@@ -16,6 +16,10 @@ use crate::{
     cdef_apply::rav1d_cdef_brow,
     ctx::CaseSet,
     env::get_uv_inter_txtp,
+    hash::{
+        HASHMASK, HashObject, HashType,
+        util::{get_hash, get_hash_object},
+    },
     in_range::InRange,
     include::{
         common::{
@@ -33,8 +37,8 @@ use crate::{
         },
     },
     internal::{
-        Bxy, Cf, CodedBlockInfo, HASHMASK, HashObject, HashType, Rav1dContext, Rav1dFrameData,
-        Rav1dTaskContext, Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
+        Bxy, Cf, CodedBlockInfo, Rav1dContext, Rav1dFrameData, Rav1dTaskContext,
+        Rav1dTileStateContext, ScratchEmuEdge, TaskContextScratch, TileStateRef,
     },
     intra_edge::EdgeFlags,
     ipred_prepare::{rav1d_prepare_intra_edges, sm_flag, sm_uv_flag},
@@ -653,59 +657,13 @@ fn decode_coefs<BD: BitDepth>(
     );
 
     if marker {
-        let mut hash: HashType = 0;
-        for _ in 0..HashType::BITS {
-            hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac) as HashType;
-            hash |= bit;
-        }
-        let hash = hash;
-        //println!("Found hash = {}", hash);
-        if let Some(hashmap) = hashmap.clone() {
-            //println!("Let some hash = {}", hash);
-            let hashmaps_lock = hashmap.lock();
-            //   println!("TX used: {:?}", tx);
-            if let Some(hashmap_lock) = hashmaps_lock.get(tx as usize) {
-                /*
-                println!(
-                    "{:?}",
-                    hashmap_lock
-                        .iter()
-                        .map(|(hash, hash_object)| { hash })
-                        .collect::<Vec<_>>()
-                );
-                */
-                match hashmap_lock.get(&hash) {
-                    Some(hash_object) => {
-                        //println!("USED A HASH TO DECODE A TILE!");
-                        cf.insert_vec(&hash_object.vec);
-                        *res_ctx = hash_object.res_ctx;
-                        *txtp = hash_object.txtp;
-                        //             println!("Used a hash");
-                        return hash_object.eob;
-                    }
-                    None => {
-                        // This is also bad, we have a hash but it doesnt reference anything!
-                        // We can either panic, or try our best
-                        // TODO: Add a check for strict standards following
-                        // If it is, we panic, otherwise return as a empty frame and try to keep going
-                        //
-                        // For now we just panic
-                        panic!(
-                            "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}\nTX {:?}",
-                            hash, tx as usize
-                        );
-                        //return 0;
-                    }
-                }
-            }
-        } else {
-            // This is bad!
-            // We got a marker to read, but we dont have a hashmap to read from!
-            // This is a horrible place to be in
-            // We should panic!
-            panic!("NEEDED TO READ A HASH BUT HAVE NO HASHMAP TO READ FROM");
-        }
+        let hash = get_hash(&mut ts_c.msac);
+        let (vec, ctx, tx_type, end_of_buffer) =
+            get_hash_object(hashmap, hash, tx as usize, bs as usize);
+        cf.insert_vec(&vec);
+        *res_ctx = ctx;
+        *txtp = tx_type;
+        return end_of_buffer;
     }
     // transform type (chroma: derived, luma: explicitly coded)
     use Av1BlockIntraInter::*;
@@ -1442,7 +1400,10 @@ fn decode_coefs<BD: BitDepth>(
             txtp: *txtp,
         };
         let mut hashmaps_lock = hashmap.lock();
-        let hashmap_lock = hashmaps_lock.get_mut(tx as usize);
+        let hashmaps_lock_tx = hashmaps_lock
+            .get_mut(bs as usize)
+            .expect("BAD INDEX ON BLOCK SIZE");
+        let hashmap_lock = hashmaps_lock_tx.get_mut(tx as usize);
         if let Some(hashmap_lock) = hashmap_lock {
             hashmap_lock.insert(hash, hash_object);
         } else {

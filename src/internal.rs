@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     ffi::{c_int, c_uint},
     mem,
     ops::{Deref, Range},
@@ -752,11 +751,6 @@ impl Rav1dFrameContext {
     }
 }
 
-pub type HashType = u16;
-pub const HASHMASK: HashType = HashType::MAX;
-pub type HashMapType = HashMap<HashType, HashObject>;
-pub type HashMapVecType = Arc<Mutex<[HashMapType; TxfmSize::_NUM_RECT]>>;
-
 #[derive(Default)]
 #[repr(C)]
 pub(crate) struct Rav1dFrameData {
@@ -1205,11 +1199,4 @@ impl Rav1dTaskContext {
             task_thread,
         }
     }
-}
-
-pub struct HashObject {
-    pub vec: Vec<i32>,
-    pub eob: i32,
-    pub res_ctx: u8,
-    pub txtp: u8,
 }
