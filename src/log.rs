@@ -2,7 +2,7 @@ use std::{
     ffi::{c_char, c_uint, c_void},
     fmt,
     fmt::Write as _,
-    io::{stderr, stdout, Write as _},
+    io::{Write as _, stderr, stdout},
     ptr::fn_addr_eq,
 };
 

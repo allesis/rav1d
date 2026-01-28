@@ -5,7 +5,7 @@ use std::{
     marker::PhantomData,
     ops::Deref,
     pin::Pin,
-    ptr::{drop_in_place, NonNull},
+    ptr::{NonNull, drop_in_place},
 };
 
 use crate::send_sync_non_null::SendSyncNonNull;

@@ -15,8 +15,8 @@ use crate::{
     },
     internal::Bxy,
     levels::{
-        BlockLevel, BlockPartition, CompInterType, Mv, SegmentId, TxfmSize, TxfmType, DCT_DCT,
-        H_ADST, H_FLIPADST, IDTX, V_ADST, V_FLIPADST,
+        BlockLevel, BlockPartition, CompInterType, DCT_DCT, H_ADST, H_FLIPADST, IDTX, Mv,
+        SegmentId, TxfmSize, TxfmType, V_ADST, V_FLIPADST,
     },
     refmvs::RefMvsCandidate,
     tables::TxfmInfo,

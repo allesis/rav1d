@@ -39,11 +39,7 @@ impl<T, E> ValidatedIntoResult<T, E> for Result<T, E> {
 impl<E> ValidatedIntoResult<(), E> for (bool, E) {
     fn into_result(self) -> Result<(), E> {
         let (ok, e) = self;
-        if ok {
-            Ok(())
-        } else {
-            Err(e)
-        }
+        if ok { Ok(()) } else { Err(e) }
     }
 }
 
@@ -55,7 +51,7 @@ impl ValidatedIntoResult<(), ()> for bool {
 
 macro_rules! validate_input {
     ($condition:expr, $block:block) => {{
-        use $crate::include::common::validate::{debug_abort, func_name, ValidatedIntoResult};
+        use $crate::include::common::validate::{ValidatedIntoResult, debug_abort, func_name};
 
         // Needs to be outside of the closure.
         let func_name = func_name!();

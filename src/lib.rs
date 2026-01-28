@@ -149,14 +149,13 @@ mod wedge;
 
 use std::{
     cmp,
-    collections::HashMap,
-    ffi::{c_char, c_uint, c_void, CStr},
+    ffi::{CStr, c_char, c_uint, c_void},
     mem, ptr,
     ptr::NonNull,
     slice,
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
         Arc, Once,
+        atomic::{AtomicBool, AtomicU32, Ordering},
     },
     thread,
 };
@@ -165,10 +164,10 @@ use parking_lot::Mutex;
 use to_method::To as _;
 
 pub use crate::error::Dav1dResult;
-#[cfg(feature = "bitdepth_16")]
-use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
+#[cfg(feature = "bitdepth_16")]
+use crate::include::common::bitdepth::BitDepth16;
 use crate::{
     c_arc::RawArc,
     c_box::FnFree,
@@ -198,9 +197,9 @@ use crate::{
     iter::wrapping_iter,
     log::{Rav1dLog as _, Rav1dLogger},
     obu::{rav1d_parse_obus, rav1d_parse_sequence_header},
-    picture::{rav1d_picture_alloc_copy, PictureFlags},
+    picture::{PictureFlags, rav1d_picture_alloc_copy},
     send_sync_non_null::SendSyncNonNull,
-    thread_task::{rav1d_task_delayed_fg, rav1d_worker_task, FRAME_ERROR},
+    thread_task::{FRAME_ERROR, rav1d_task_delayed_fg, rav1d_worker_task},
 };
 
 #[cold]

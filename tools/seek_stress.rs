@@ -29,13 +29,13 @@ use rav1d::{
         common::{Dav1dDataProps, Dav1dUserData},
         data::Dav1dData,
         dav1d::{
-            Dav1dContext, Dav1dLogger, Dav1dSettings, DAV1D_DECODEFRAMETYPE_ALL,
-            DAV1D_INLOOPFILTER_NONE,
+            DAV1D_DECODEFRAMETYPE_ALL, DAV1D_INLOOPFILTER_NONE, Dav1dContext, Dav1dLogger,
+            Dav1dSettings,
         },
         headers::{
+            DAV1D_CHR_UNKNOWN, DAV1D_MC_IDENTITY, DAV1D_OFF, DAV1D_PIXEL_LAYOUT_I400,
             Dav1dColorPrimaries, Dav1dSequenceHeader, Dav1dSequenceHeaderOperatingParameterInfo,
-            Dav1dSequenceHeaderOperatingPoint, Dav1dTransferCharacteristics, DAV1D_CHR_UNKNOWN,
-            DAV1D_MC_IDENTITY, DAV1D_OFF, DAV1D_PIXEL_LAYOUT_I400,
+            Dav1dSequenceHeaderOperatingPoint, Dav1dTransferCharacteristics,
         },
         picture::{Dav1dPicAllocator, Dav1dPicture},
     },
@@ -43,8 +43,8 @@ use rav1d::{
 
 use crate::{
     compat::stdio::stderr,
-    dav1d_cli_parse::{parse, CLISettings, REALTIME_DISABLE},
-    input::input::{input_close, input_open, input_read, input_seek, DemuxerContext},
+    dav1d_cli_parse::{CLISettings, REALTIME_DISABLE, parse},
+    input::input::{DemuxerContext, input_close, input_open, input_read, input_seek},
 };
 
 #[cfg(target_os = "windows")]

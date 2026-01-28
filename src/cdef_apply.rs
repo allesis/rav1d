@@ -14,7 +14,7 @@ use crate::{
     disjoint_mut::DisjointMut,
     include::{
         common::{
-            bitdepth::{BitDepth, BPC},
+            bitdepth::{BPC, BitDepth},
             intops::ulog2,
         },
         dav1d::{headers::Rav1dPixelLayout, picture::Rav1dPictureDataComponentOffset},
@@ -35,11 +35,7 @@ bitflags! {
 
 impl Backup2x8Flags {
     pub const fn select(&self, select: bool) -> Self {
-        if select {
-            *self
-        } else {
-            Self::empty()
-        }
+        if select { *self } else { Self::empty() }
     }
 }
 

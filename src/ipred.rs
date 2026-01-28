@@ -19,11 +19,11 @@ use crate::include::common::bitdepth::bd_fn;
 use crate::include::common::bitdepth::bpc_fn;
 use crate::{
     cpu::CpuFlags,
-    enum_map::{enum_map, enum_map_ty, DefaultValue},
+    enum_map::{DefaultValue, enum_map, enum_map_ty},
     ffi_safe::FFISafe,
     include::{
         common::{
-            bitdepth::{AsPrimitive, BitDepth, DynPixel, BPC},
+            bitdepth::{AsPrimitive, BPC, BitDepth, DynPixel},
             intops::{apply_sign, iclip},
         },
         dav1d::{
@@ -39,7 +39,7 @@ use crate::{
     },
     strided::Strided as _,
     tables::{
-        dav1d_dr_intra_derivative, dav1d_filter_intra_taps, dav1d_sm_weights, filter_fn, FLT_INCR,
+        FLT_INCR, dav1d_dr_intra_derivative, dav1d_filter_intra_taps, dav1d_sm_weights, filter_fn,
     },
     wrap_fn_ptr::wrap_fn_ptr,
 };
@@ -1443,10 +1443,10 @@ mod neon {
     use to_method::To;
 
     use super::*;
-    #[cfg(feature = "bitdepth_16")]
-    use crate::include::common::bitdepth::BitDepth16;
     #[cfg(feature = "bitdepth_8")]
     use crate::include::common::bitdepth::BitDepth8;
+    #[cfg(feature = "bitdepth_16")]
+    use crate::include::common::bitdepth::BitDepth16;
 
     wrap_fn_ptr!(unsafe extern "C" fn z13_fill(
         dst: *mut DynPixel,

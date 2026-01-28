@@ -9,6 +9,8 @@ use std::{
 use bitflags::bitflags;
 use libc::ptrdiff_t;
 
+#[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
+use crate::include::common::bitdepth::BPC;
 #[cfg(all(
     feature = "asm",
     not(any(target_arch = "riscv64", target_arch = "riscv32"))
@@ -16,8 +18,6 @@ use libc::ptrdiff_t;
 use crate::include::common::bitdepth::bd_fn;
 #[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
 use crate::include::common::bitdepth::bpc_fn;
-#[cfg(all(feature = "asm", any(target_arch = "x86", target_arch = "x86_64")))]
-use crate::include::common::bitdepth::BPC;
 use crate::{
     align::AlignedVec64,
     cpu::CpuFlags,

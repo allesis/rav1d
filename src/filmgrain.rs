@@ -19,7 +19,7 @@ use to_method::To;
 use crate::include::common::bitdepth::bd_fn;
 use crate::{
     cpu::CpuFlags,
-    enum_map::{enum_map, enum_map_ty, DefaultValue},
+    enum_map::{DefaultValue, enum_map, enum_map_ty},
     ffi_safe::FFISafe,
     include::{
         common::{

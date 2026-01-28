@@ -28,7 +28,7 @@ use crate::{
     ffi_safe::FFISafe,
     include::{
         common::{
-            bitdepth::{AsPrimitive, BitDepth, DynPixel, LeftPixelRow, ToPrimitive, BPC},
+            bitdepth::{AsPrimitive, BPC, BitDepth, DynPixel, LeftPixelRow, ToPrimitive},
             intops::iclip,
         },
         dav1d::picture::{FFISafeRav1dPictureDataComponentOffset, Rav1dPictureDataComponentOffset},
@@ -51,11 +51,7 @@ bitflags! {
 
 impl LrEdgeFlags {
     pub const fn select(&self, select: bool) -> Self {
-        if select {
-            *self
-        } else {
-            Self::empty()
-        }
+        if select { *self } else { Self::empty() }
     }
 }
 

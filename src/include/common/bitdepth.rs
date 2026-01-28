@@ -8,7 +8,7 @@ use std::{
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::{
-    align::{Align16, Align8, ArrayDefault},
+    align::{Align8, Align16, ArrayDefault},
     include::common::intops::clip,
 };
 

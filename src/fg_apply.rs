@@ -4,9 +4,9 @@ use std::cmp;
 
 use crate::{
     align::ArrayDefault,
-    filmgrain::{Rav1dFilmGrainDSPContext, FG_BLOCK_SIZE},
+    filmgrain::{FG_BLOCK_SIZE, Rav1dFilmGrainDSPContext},
     include::{
-        common::bitdepth::{BitDepth, BPC},
+        common::bitdepth::{BPC, BitDepth},
         dav1d::{
             headers::{Rav1dMatrixCoefficients, Rav1dPixelLayout},
             picture::Rav1dPicture,

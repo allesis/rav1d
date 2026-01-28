@@ -6,8 +6,8 @@ use std::{
     ops::{Add, AddAssign, Deref},
     process::abort,
     sync::{
-        atomic::{AtomicBool, AtomicI32, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicI32, Ordering},
     },
     thread,
 };
@@ -15,10 +15,10 @@ use std::{
 use atomig::{Atom, Atomic};
 use parking_lot::{Mutex, MutexGuard, RwLock, RwLockReadGuard};
 
-#[cfg(feature = "bitdepth_16")]
-use crate::include::common::bitdepth::BitDepth16;
 #[cfg(feature = "bitdepth_8")]
 use crate::include::common::bitdepth::BitDepth8;
+#[cfg(feature = "bitdepth_16")]
+use crate::include::common::bitdepth::BitDepth16;
 use crate::{
     cdf::rav1d_cdf_thread_update,
     decode::{
