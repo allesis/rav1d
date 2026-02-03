@@ -27,3 +27,5 @@ rav1d.norg
 *.y4m
 test.y4m
 *.y4m
+blue_hash.y4m
+.env
