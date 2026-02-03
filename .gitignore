@@ -24,3 +24,4 @@ target/
 blue.y4m
 test.y4m
 blue_hash.y4m
+.env
