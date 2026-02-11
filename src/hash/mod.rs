@@ -29,7 +29,7 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16) -> HashType {
             (*coeff).hash(&mut hasher)
         }
     });
-    //eob.hash(&mut hasher);
+    eob.hash(&mut hasher);
     let hash = hasher.finish();
     (hash & (HASHMASK as u64))
         .try_into()

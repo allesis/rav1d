@@ -20,7 +20,7 @@ pub fn add_hash_object(
     txtp: u8,
     hashmap: HashMapVecType,
     tx_size: usize,
-    block_size: usize,
+    plane_index: usize,
 ) {
     let hash = hashcoeffs(coefs.clone(), eob);
 
@@ -33,7 +33,7 @@ pub fn add_hash_object(
 
     let mut hashmaps_lock = hashmap.lock();
     let hashmaps_lock_tx = hashmaps_lock
-        .get_mut(block_size)
+        .get_mut(plane_index)
         .expect("BAD INDEX ON BLOCK SIZE");
     let hashmap_lock = hashmaps_lock_tx.get_mut(tx_size);
     if let Some(hashmap_lock) = hashmap_lock {
@@ -47,11 +47,11 @@ pub fn get_hash_object(
     hashmap: Option<HashMapVecType>,
     hash: HashType,
     tx_size: usize,
-    block_size: usize,
+    plane_index: usize,
 ) -> (Vec<i32>, u8, u8, c_int) {
     if let Some(hashmap) = hashmap.clone() {
         let hashmaps_lock = hashmap.lock();
-        if let Some(hashmaps_lock_tx) = hashmaps_lock.get(block_size) {
+        if let Some(hashmaps_lock_tx) = hashmaps_lock.get(plane_index) {
             if let Some(hashmap_lock) = hashmaps_lock_tx.get(tx_size) {
                 match hashmap_lock.get(&hash) {
                     Some(hash_object) => {
@@ -70,8 +70,8 @@ pub fn get_hash_object(
                         //
                         // For now we just panic
                         panic!(
-                            "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}\nTX {:?}\nBLOCK_SIZE: {:?}\n",
-                            hash, tx_size, block_size,
+                            "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}\nTX {:?}\nPLANE_INDEX: {:?}\n",
+                            hash, tx_size, plane_index,
                         );
                         //return 0;
                     }

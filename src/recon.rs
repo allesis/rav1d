@@ -636,8 +636,7 @@ fn decode_coefs<BD: BitDepth>(
 
     if marker {
         let hash = get_hash(&mut ts_c.msac);
-        let (vec, ctx, tx_type, end_of_buffer) =
-            get_hash_object(hashmap, hash, tx as usize, bs as usize);
+        let (vec, ctx, tx_type, end_of_buffer) = get_hash_object(hashmap, hash, tx as usize, plane);
         cf.insert_vec(&vec);
         *res_ctx = ctx;
         *txtp = tx_type;
@@ -1363,7 +1362,7 @@ fn decode_coefs<BD: BitDepth>(
             *txtp,
             hashmap,
             tx as usize,
-            bs as usize,
+            plane,
         );
     } else {
         panic!("DIDNT FIND A HASHMAP");
