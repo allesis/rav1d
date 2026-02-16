@@ -1,15 +1,11 @@
 use libc::c_int;
 
-use super::{HashMapVecType, HashObject, HashType, hashcoeffs};
-use crate::msac::{MsacContext, rav1d_msac_decode_bool_equi};
+use super::{HashMapVecType, HashObject, HashType, ensure_sizing, hashcoeffs};
+use crate::msac::{MsacContext, rav1d_msac_decode_bools};
 
 pub fn get_hash(msac: &mut MsacContext) -> HashType {
-    let mut hash: HashType = 0;
-    for _ in 0..HashType::BITS {
-        hash <<= 1;
-        let bit = rav1d_msac_decode_bool_equi(msac) as HashType;
-        hash |= bit;
-    }
+    ensure_sizing!(HashType::BITS, u8::MAX);
+    let hash: HashType = rav1d_msac_decode_bools(msac, HashType::BITS as u8) as HashType;
     return hash;
 }
 
