@@ -13,8 +13,16 @@ install-release:
 	cp target/release/dav1d $HOME/.local/bin/dav1d
 check VIDEO DIRECTORY=DEFAULT_DIRECTORY: release (test VIDEO)
 	ffprobe -v error -select_streams v:0 -show_entries stream=y4m -of default=nokey=1:noprint_wrappers=1 {{DIRECTORY}}/{{VIDEO}}-decode.y4m
-test VIDEO DIRECTORY=DEFAULT_DIRECTORY: release
+test VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
+test-release VIDEO DIRECTORY=DEFAULT_DIRECTORY: release
 	./target/release/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --framedelay 1 --threads 1
+test-no-disable-reorder VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --threads 1
+test-no-disable-threads VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m --framedelay 1
+test-no-disable-all VIDEO DIRECTORY=DEFAULT_DIRECTORY: build
+	./target/debug/dav1d -i {{DIRECTORY}}/{{VIDEO}}.ivf -o {{DIRECTORY}}/{{VIDEO}}-decode.y4m
 test-convert VIDEO DIRECTORY=DEFAULT_DIRECTORY: (test VIDEO DIRECTORY) (convert VIDEO DIRECTORY) && (cleanup VIDEO DIRECTORY)
 cleanup VIDEO DIRECTORY=DEFAULT_DIRECTORY:
 	rm {{DIRECTORY}}/{{VIDEO}}-decode.y4m
