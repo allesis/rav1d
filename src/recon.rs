@@ -555,13 +555,13 @@ fn decode_coefs<BD: BitDepth>(
         pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
             self.0[self.index(rc)] = value.as_();
         }
-        pub fn into_vec_i32(&self) -> Vec<i32> {
+        pub fn into_vec_i32(self) -> Vec<i32> {
             self.0
                 .iter()
                 .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
                 .collect()
         }
-        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
+        pub fn insert_vec(&mut self, vec: &[i32]) {
             vec.iter().enumerate().for_each(|(i, v)| {
                 self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
             });
@@ -627,7 +627,7 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let mut cf = Cf::<BD>(cf);
-    //println!("Coeffs: {:?}", cf);
+
     let mctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
     let marker = rav1d_msac_decode_bool_adapt(
         &mut ts_c.msac,

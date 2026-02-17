@@ -4185,7 +4185,6 @@ pub(crate) fn rav1d_decode_tile_sbrow(
         )?;
         if ts.context.try_lock().unwrap().msac.cnt <= -15 {
             return Err(());
-        } else {
         }
         if t.b.x & 16 != 0 || f.seq_hdr().sb128 != 0 {
             t.a += 1;

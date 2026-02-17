@@ -13,6 +13,7 @@ use atomig::{Atom, Atomic};
 use libc::ptrdiff_t;
 use parking_lot::{Condvar, Mutex, RwLock, RwLockReadGuard};
 use strum::FromRepr;
+use to_method::To;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::{
@@ -934,9 +935,9 @@ impl From<Vec<i32>> for Cf {
     }
 }
 
-impl Into<Vec<i32>> for Cf {
-    fn into(self) -> Vec<i32> {
-        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
+impl From<Cf> for Vec<i32> {
+    fn from(val: Cf) -> Self {
+        let vec: Vec<i32> = val.0.try_to().expect("Failed to convert to array");
         vec
     }
 }

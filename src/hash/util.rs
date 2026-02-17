@@ -23,8 +23,8 @@ pub fn add_hash_object(
     let hash_object = HashObject {
         vec: coefs,
         eob: eob as i32,
-        res_ctx: res_ctx,
-        txtp: txtp,
+        res_ctx,
+        txtp,
     };
 
     let mut hashmaps_lock = hashmap.lock();
