@@ -21,7 +21,7 @@ pub struct HashObject {
     pub txtp: u8,
 }
 
-fn hashcoeffs(coeffs: Vec<i32>, eob: u16) -> HashType {
+fn hashcoeffs(coeffs: Vec<i32>) -> HashType {
     let mut hasher = DefaultHasher::new();
     coeffs.iter().for_each(|coeff| {
         if *coeff == 0 {
@@ -29,7 +29,6 @@ fn hashcoeffs(coeffs: Vec<i32>, eob: u16) -> HashType {
             (*coeff).hash(&mut hasher)
         }
     });
-    eob.hash(&mut hasher);
     let hash = hasher.finish();
     (hash & (HASHMASK as u64))
         .try_into()

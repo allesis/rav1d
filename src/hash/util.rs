@@ -18,7 +18,7 @@ pub fn add_hash_object(
     tx_size: usize,
     plane_index: usize,
 ) {
-    let hash = hashcoeffs(coefs.clone(), eob);
+    let hash = hashcoeffs(coefs.clone());
 
     let hash_object = HashObject {
         vec: coefs,
