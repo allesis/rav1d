@@ -18,7 +18,7 @@ pub fn add_hash_object(
     tx_size: usize,
     plane_index: usize,
 ) {
-    let hash = hashcoeffs(coefs.clone());
+    let hash = hashcoeffs(coefs.clone(), eob);
 
     let hash_object = HashObject {
         vec: coefs,
@@ -28,9 +28,7 @@ pub fn add_hash_object(
     };
 
     let mut hashmaps_lock = hashmap.lock();
-    let hashmaps_lock_tx = hashmaps_lock
-        .get_mut(plane_index)
-        .expect("BAD INDEX ON BLOCK SIZE");
+    let hashmaps_lock_tx = hashmaps_lock.get_mut(0).expect("BAD INDEX ON BLOCK SIZE");
     let hashmap_lock = hashmaps_lock_tx.get_mut(tx_size);
     if let Some(hashmap_lock) = hashmap_lock {
         hashmap_lock.insert(hash, hash_object);
@@ -47,7 +45,7 @@ pub fn get_hash_object(
 ) -> (Vec<i32>, u8, u8, c_int) {
     if let Some(hashmap) = hashmap.clone() {
         let hashmaps_lock = hashmap.lock();
-        if let Some(hashmaps_lock_tx) = hashmaps_lock.get(plane_index) {
+        if let Some(hashmaps_lock_tx) = hashmaps_lock.get(0) {
             if let Some(hashmap_lock) = hashmaps_lock_tx.get(tx_size) {
                 match hashmap_lock.get(&hash) {
                     Some(hash_object) => {
