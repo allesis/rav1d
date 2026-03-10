@@ -86,7 +86,7 @@ pub mod include {
         pub mod picture;
     } // mod dav1d
 } // mod include
-
+pub mod hash;
 pub mod align;
 pub(crate) mod c_arc;
 pub(crate) mod c_box;
@@ -149,14 +149,12 @@ mod wedge;
 
 use std::{
     cmp,
-    collections::HashMap,
     ffi::{c_char, c_uint, c_void, CStr},
-    mem, ptr,
-    ptr::NonNull,
+    mem, ptr::{self, NonNull},
     slice,
     sync::{
         atomic::{AtomicBool, AtomicU32, Ordering},
-        Arc, Once,
+        Arc, Once, RwLock,
     },
     thread,
 };
@@ -416,7 +414,7 @@ pub(crate) fn rav1d_open(s: &Rav1dSettings) -> Rav1dResult<Arc<Rav1dContext>> {
         task_thread,
         state,
         tc,
-        hashmap: Some(Arc::new(Mutex::new(Default::default()))),
+        hashmap: Some(Arc::new(RwLock::new(Default::default()))),
         ..Default::default()
     };
 

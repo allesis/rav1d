@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     ffi::{c_int, c_uint},
     mem,
     ops::{Deref, Range},
@@ -25,6 +24,7 @@ use crate::{
     env::BlockContext,
     error::Rav1dError,
     filmgrain::{Rav1dFilmGrainDSPContext, GRAIN_HEIGHT, GRAIN_WIDTH},
+    hash::HashMapVecType,
     include::{
         common::bitdepth::{BitDepth, BitDepth16, BitDepth8, BPC},
         dav1d::{
@@ -41,7 +41,7 @@ use crate::{
     },
     ipred::Rav1dIntraPredDSPContext,
     itx::Rav1dInvTxfmDSPContext,
-    levels::{Av1Block, Filter2d, SegmentId, TxfmSize, TxfmType, WHT_WHT},
+    levels::{Av1Block, Filter2d, SegmentId, TxfmType, WHT_WHT},
     lf_mask::{Av1Filter, Av1FilterLUT, Av1Restoration, Av1RestorationUnit},
     log::Rav1dLogger,
     loopfilter::Rav1dLoopFilterDSPContext,
@@ -751,11 +751,6 @@ impl Rav1dFrameContext {
     }
 }
 
-pub type HashType = u16;
-pub const HASHMASK: HashType = HashType::MAX;
-pub type HashMapType = HashMap<HashType, HashObject>;
-pub type HashMapVecType = Arc<Mutex<[HashMapType; TxfmSize::_NUM_RECT]>>;
-
 #[derive(Default)]
 #[repr(C)]
 pub(crate) struct Rav1dFrameData {
@@ -830,8 +825,7 @@ impl Rav1dFrameData {
     }
 
     pub fn add_hashmap(&mut self) {
-        // FIX: DONT HARD CODE THIS EITHER
-        self.hashmap = Some(Arc::new(Mutex::new(Default::default())));
+        self.hashmap = Some(Arc::new(std::sync::RwLock::new(Default::default())));
     }
 }
 
@@ -1204,11 +1198,4 @@ impl Rav1dTaskContext {
             task_thread,
         }
     }
-}
-
-pub struct HashObject {
-    pub vec: Vec<i32>,
-    pub eob: i32,
-    pub res_ctx: u8,
-    pub txtp: u8,
 }
