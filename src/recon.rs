@@ -627,6 +627,11 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let mut cf = Cf::<BD>(cf);
+
+    let val = rav1d_msac_decode_bools(&mut ts_c.msac, 32);
+    dbg!(val);
+    assert!(val == 0xFFFFFFFF);
+
     let mctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
     let marker = rav1d_msac_decode_bool_adapt(
         &mut ts_c.msac,

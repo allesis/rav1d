@@ -29,11 +29,6 @@ pub fn hashcoeffs(coeffs: Vec<u8>) -> HashType {
 
 pub fn get_hash(msac: &mut MsacContext) -> HashType {
     let mut hash: HashType = 0;
-    let temp: u16 = rav1d_msac_decode_bools(msac, 16).try_into().unwrap();
-
-    dbg!(temp);
-
-    assert!(temp == 42);
 
     for _ in 0..HashType::BITS {
         hash <<= 1;
@@ -66,6 +61,7 @@ pub fn get_hash_object(hashmap: HashMapVecType, hash: HashType) -> (Vec<i32>, u8
     let hashmap_lock = hashmap.read().expect("Failed to get read lock on hashmap");
     match hashmap_lock.get(&hash) {
         Some(hash_object) => {
+            println!("HASH");
             return (
                 hash_object.vec.clone(),
                 hash_object.res_ctx,
