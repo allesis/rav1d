@@ -628,10 +628,6 @@ fn decode_coefs<BD: BitDepth>(
     };
     let mut cf = Cf::<BD>(cf);
 
-    let val = rav1d_msac_decode_bools(&mut ts_c.msac, 32);
-    dbg!(val);
-    assert!(val == 0xFFFFFFFF);
-
     let mctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
     let marker = rav1d_msac_decode_bool_adapt(
         &mut ts_c.msac,
@@ -641,10 +637,10 @@ fn decode_coefs<BD: BitDepth>(
     if marker {
         let hash = get_hash(&mut ts_c.msac);
         if let Some(hashmap) = hashmap {
-            let (hash_vec, hash_res_ctx, hash_txtp, hash_eob) = get_hash_object(hashmap, hash);
+            let (hash_vec, _hash_res_ctx, _hash_txtp, hash_eob) = get_hash_object(hashmap, hash);
             cf.insert_vec(&hash_vec);
-            *res_ctx = hash_res_ctx;
-            *txtp = hash_txtp;
+            //*res_ctx = hash_res_ctx;
+            //*txtp = hash_txtp;
             return hash_eob;
         } else {
             panic!("NEEDED TO READ A HASH BUT HAVE NO HASHMAP TO READ FROM");

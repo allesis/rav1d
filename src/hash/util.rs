@@ -1,26 +1,22 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use vq::{Quantizer, ScalarQuantizer};
-
-use super::{HashMapVecType, HashObject, HashType, HASHMASK};
+use super::{CoeffVecType, HashMapVecType, HashObject, HashType, HASHMASK};
 use crate::msac::{rav1d_msac_decode_bool_equi, rav1d_msac_decode_bools, MsacContext};
 
-pub fn quantize(coeffs: Vec<i32>) -> Vec<u8> {
-    let vec_coeffs = coeffs
+pub fn quantize(coeffs: CoeffVecType) -> CoeffVecType {
+    coeffs
         .iter()
-        .map(|coeff| *coeff as f32)
-        .collect::<Vec<f32>>();
-
-    let sq: ScalarQuantizer = ScalarQuantizer::new(0.0, 255.0, 256).unwrap();
-
-    let qcoeffs = sq.quantize(&vec_coeffs).unwrap();
-
-    qcoeffs
+        .map(|coeff| (*coeff as i32) >> 3)
+        .collect::<CoeffVecType>()
 }
 
-pub fn hashcoeffs(coeffs: Vec<u8>) -> HashType {
+pub fn hashcoeffs(coeffs: CoeffVecType) -> HashType {
     let mut hasher = DefaultHasher::new();
-    coeffs.iter().for_each(|coeff| (*coeff).hash(&mut hasher));
+    coeffs.iter().for_each(|coeff| {
+        if *coeff != 0 {
+            (*coeff).hash(&mut hasher)
+        }
+    });
     let hash = hasher.finish();
     (hash & (HASHMASK as u64))
         .try_into()
@@ -28,14 +24,9 @@ pub fn hashcoeffs(coeffs: Vec<u8>) -> HashType {
 }
 
 pub fn get_hash(msac: &mut MsacContext) -> HashType {
-    let mut hash: HashType = 0;
-
-    for _ in 0..HashType::BITS {
-        hash <<= 1;
-        let bit = rav1d_msac_decode_bool_equi(msac) as HashType;
-        hash |= bit;
-    }
-    dbg!(hash);
+    let mut hash: HashType = rav1d_msac_decode_bools(msac, HashType::BITS.try_into().unwrap())
+        .try_into()
+        .unwrap();
     hash
 }
 
@@ -43,6 +34,10 @@ pub fn add_hash_object(hashmap: HashMapVecType, coeffs: Vec<i32>, eob: i32, res_
     let qcoeffs = quantize(coeffs.clone());
 
     let hash = hashcoeffs(qcoeffs);
+
+    if *coeffs.get(0).unwrap() == 131 {
+        dbg!(&coeffs);
+    }
 
     let hash_object = HashObject {
         vec: coeffs,
