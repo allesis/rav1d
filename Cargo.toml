@@ -7,7 +7,7 @@ name = "rav1d"
 authors = ["Rav1d Developers", "Prossimo"]
 version = "1.1.0"
 edition = "2021"
-rust-version = "1.83.0"
+rust-version = "1.79"
 description = "Rust port of the dav1d AV1 decoder"
 license = "BSD-2-Clause"
 repository = "https://github.com/memorysafety/rav1d"
@@ -27,7 +27,6 @@ paste = "1.0.14"
 raw-cpuid = "11.0.1"
 strum = { version = "0.27", features = ["derive"] }
 to_method = "1.1.0"
-vq = "0.2.0"
 zerocopy = { version = "0.7.32", features = ["derive"] }
 
 [build-dependencies]
