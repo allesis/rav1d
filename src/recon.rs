@@ -16,10 +16,7 @@ use crate::{
     cdef_apply::rav1d_cdef_brow,
     ctx::CaseSet,
     env::get_uv_inter_txtp,
-    hash::{
-        util::{hashcoeffs, quantize},
-        HashObject, HashType,
-    },
+    hash::util::{add_hash_object, get_hash, get_hash_object},
     in_range::InRange,
     include::{
         common::{
@@ -558,13 +555,13 @@ fn decode_coefs<BD: BitDepth>(
         pub fn set<T: ToPrimitive<BD::Coef>>(&mut self, rc: u16, value: T) {
             self.0[self.index(rc)] = value.as_();
         }
-        pub fn into_vec_i32(&self) -> Vec<i32> {
+        pub fn into_vec_i32(self) -> Vec<i32> {
             self.0
                 .iter()
                 .map(|&c| c.try_into().expect("FAILED TO CONVERT"))
                 .collect()
         }
-        pub fn insert_vec(&mut self, vec: &Vec<i32>) {
+        pub fn insert_vec(&mut self, vec: &[i32]) {
             vec.iter().enumerate().for_each(|(i, v)| {
                 self.set::<i32>(i.try_into().expect("FAILED TO CONVERT TO u16"), *v);
             });
@@ -630,7 +627,6 @@ fn decode_coefs<BD: BitDepth>(
         CfSelect::Task => t_cf.select_mut::<BD>(),
     };
     let mut cf = Cf::<BD>(cf);
-    //println!("Coeffs: {:?}", cf);
     let mctx = get_skip_ctx(t_dim, bs, a, l, chroma, f.cur.p.layout);
     let marker = rav1d_msac_decode_bool_adapt(
         &mut ts_c.msac,
@@ -638,29 +634,13 @@ fn decode_coefs<BD: BitDepth>(
     );
 
     if marker {
-        let mut hash: HashType = 0;
-        for _ in 0..HashType::BITS {
-            hash <<= 1;
-            let bit = rav1d_msac_decode_bool_equi(&mut ts_c.msac) as HashType;
-            hash |= bit;
-        }
-        let hash = hash;
+        let hash = get_hash(&mut ts_c.msac);
         if let Some(hashmap) = hashmap {
-            let hashmap_lock = hashmap.read().expect("Failed to get read lock on hashmap");
-            match hashmap_lock.get(&hash) {
-                Some(hash_object) => {
-                    cf.insert_vec(&hash_object.vec);
-                    *res_ctx = hash_object.res_ctx;
-                    *txtp = hash_object.txtp;
-                    return hash_object.eob;
-                }
-                None => {
-                    panic!(
-                        "READ A HASH BUT COULD NOT FIND IT IN HASHMAP\nHASH {:?}\nTX {:?}",
-                        hash, tx as usize
-                    );
-                }
-            }
+            let (hash_vec, hash_res_ctx, hash_txtp, hash_eob) = get_hash_object(hashmap, hash);
+            cf.insert_vec(&hash_vec);
+            *res_ctx = hash_res_ctx;
+            *txtp = hash_txtp;
+            return hash_eob;
         } else {
             panic!("NEEDED TO READ A HASH BUT HAVE NO HASHMAP TO READ FROM");
         }
@@ -1382,19 +1362,7 @@ fn decode_coefs<BD: BitDepth>(
 
     *res_ctx = (cmp::min(cul_level, 63) | dc_sign_level) as u8;
     if let Some(hashmap) = hashmap {
-        let hash_rcoeffs = quantize(cf.into_vec_i32());
-        let hash = hashcoeffs(hash_rcoeffs);
-
-        let hash_object = HashObject {
-            vec: cf.into_vec_i32(),
-            eob: res_eob,
-            res_ctx: *res_ctx,
-            txtp: *txtp,
-        };
-        let mut hashmap_lock = hashmap
-            .write()
-            .expect("Failed to get write lock on hashmap");
-        hashmap_lock.insert(hash, hash_object);
+        add_hash_object(hashmap, cf.into_vec_i32(), res_eob, *res_ctx, *txtp);
     } else {
         panic!("DIDNT FIND A HASHMAP");
     }
