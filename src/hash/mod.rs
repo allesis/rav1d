@@ -5,6 +5,7 @@ use std::{
 
 pub mod util;
 pub type HashType = u16;
+pub type CoeffVecType = Vec<i32>;
 pub type HashMapType = HashMap<HashType, HashObject>;
 pub type HashMapVecType = Arc<RwLock<HashMapType>>;
 pub type HashBufferType = Arc<Mutex<Vec<(HashType, HashObject, usize)>>>;

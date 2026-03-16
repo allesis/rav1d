@@ -933,9 +933,9 @@ impl From<Vec<i32>> for Cf {
     }
 }
 
-impl Into<Vec<i32>> for Cf {
-    fn into(self) -> Vec<i32> {
-        let vec = self.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
+impl From<Cf> for Vec<i32> {
+    fn from(value: Cf) -> Self {
+        let vec = value.0.try_into().expect("FAILED TO CONVERT CF TO VEC");
         vec
     }
 }
